@@ -312,6 +312,9 @@
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Novo Sprint
       </button>
+      <button class="btn btn-ghost btn-sm" onclick="exportData()">
+        📥 Exportar
+      </button>
     </div>
   </div>
 
@@ -450,28 +453,30 @@
   <script>
     // ──────────────────────────────────────────────────────────────
     //  DB helpers
-    //  Primary storage: server (data.json via /api/data)
-    //  Fallback: localStorage (when running locally without server)
+    //  Primary storage: JSONBin.io (Cloud)
+    //  Fallback: localStorage (Offline safe)
     //  Structure: { activeSprint: id, sprints: [ { id, name, days, currentDay, items[], createdAt } ] }
     // ──────────────────────────────────────────────────────────────
     const DB_KEY = 'burndown_db';
-    const IS_SERVER = window.location.protocol !== 'file:'; // true when served by Flask
+    const BIN_ID = '69d3d50daaba882197cd3fbd';
+    const API_KEY = '$2a$10$b1zk.UlxUmhefLmBtQ66DOhVPYpHQN6tYqtixNMQrAJGBDCWlYxey';
 
     function loadLocalDB() {
       try { return JSON.parse(localStorage.getItem(DB_KEY)) || null; } catch { return null; }
     }
 
     function saveDB(db) {
-      // Always save to localStorage
+      // 1. Save locally instantly
       localStorage.setItem(DB_KEY, JSON.stringify(db));
-      // If running on server, also sync to data.json (fire & forget)
-      if (IS_SERVER) {
-        fetch('/api/data', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(db)
-        }).catch(() => {}); // silent fail — localStorage is the backup
-      }
+      // 2. Sync to cloud in background
+      fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Master-Key': API_KEY
+        },
+        body: JSON.stringify(db)
+      }).catch(err => console.error('Cloud sync failed:', err));
     }
 
     function initDB(serverData) {
@@ -508,15 +513,13 @@
         document.getElementById('newSprintName').addEventListener('keydown', e => { if (e.key === 'Enter') createSprint(); });
       };
 
-      if (IS_SERVER) {
-        // Try to load from server first
-        fetch('/api/data')
-          .then(r => r.status === 204 ? null : r.json())
-          .then(data => init(data))
-          .catch(() => init(null)); // fallback to localStorage
-      } else {
-        init(null); // local file: use localStorage only
-      }
+      // Try to load from JSONBin.io first (Cloud Sync)
+      fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+        headers: { 'X-Master-Key': API_KEY }
+      })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => init(data ? data.record : null))
+      .catch(() => init(null)); // fallback to localStorage
     });
 
     function refreshAll() {
@@ -863,6 +866,15 @@
     // ──────────────────────────────────────────────────────────────
     function escHtml(s) {
       return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+    function exportData() {
+      const data = loadLocalDB();
+      if (!data) return alert('Não há dados para exportar.');
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'data.json';
+      a.click();
     }
     function pulse(id) {
       const el = document.getElementById(id);
