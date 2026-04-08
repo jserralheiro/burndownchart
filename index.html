@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="pt">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sprint Burndown Chart</title>
-  <meta name="description" content="Ferramenta interativa de Burndown Chart para gestão de sprints ágeis com histórico de sprints." />
+  <meta name="description"
+    content="Ferramenta interativa de Burndown Chart para gestão de sprints ágeis com histórico de sprints." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <style>
     :root {
@@ -24,7 +27,15 @@
       --radius: 14px;
       --shadow: 0 8px 32px #0007;
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       font-family: 'Inter', sans-serif;
       background: var(--bg);
@@ -48,19 +59,32 @@
       z-index: 100;
       backdrop-filter: blur(12px);
     }
+
     .topbar-brand {
       display: flex;
       align-items: center;
       gap: 12px;
     }
+
     .topbar-logo {
-      width: 34px; height: 34px;
+      width: 34px;
+      height: 34px;
       background: linear-gradient(135deg, var(--accent), var(--accent2));
       border-radius: 9px;
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
-    .topbar h1 { font-size: 1rem; font-weight: 700; }
-    .topbar-sub { font-size: .73rem; color: var(--muted); }
+
+    .topbar h1 {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .topbar-sub {
+      font-size: .73rem;
+      color: var(--muted);
+    }
 
     /* ── Sprint switcher ── */
     .sprint-switcher {
@@ -69,9 +93,11 @@
       gap: 8px;
       flex-wrap: wrap;
     }
+
     .sprint-select-wrap {
       position: relative;
     }
+
     select.sprint-select {
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -88,10 +114,15 @@
       min-width: 160px;
       transition: border-color .2s;
     }
-    select.sprint-select:focus { border-color: var(--accent); }
+
+    select.sprint-select:focus {
+      border-color: var(--accent);
+    }
+
     .select-arrow {
       position: absolute;
-      right: 10px; top: 50%;
+      right: 10px;
+      top: 50%;
       transform: translateY(-50%);
       pointer-events: none;
       color: var(--muted);
@@ -99,23 +130,66 @@
 
     /* ── Buttons ── */
     .btn {
-      display: inline-flex; align-items: center; gap: 7px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
       padding: 8px 16px;
       border-radius: 8px;
-      font-family: inherit; font-size: .83rem; font-weight: 600;
-      cursor: pointer; border: none; transition: all .2s;
+      font-family: inherit;
+      font-size: .83rem;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all .2s;
     }
-    .btn-primary { background: linear-gradient(135deg, var(--accent), #4f46e5); color: #fff; }
-    .btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
-    .btn-ghost { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
-    .btn-ghost:hover { color: var(--text); border-color: var(--accent); }
-    .btn-danger { background: #ff5c7a18; color: var(--danger); border: 1px solid #ff5c7a33; }
-    .btn-danger:hover { background: #ff5c7a28; }
-    .btn-sm { padding: 6px 12px; font-size: .78rem; border-radius: 6px; }
-    .btn-full { width: 100%; justify-content: center; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #4f46e5);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.15);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .btn-danger {
+      background: #ff5c7a18;
+      color: var(--danger);
+      border: 1px solid #ff5c7a33;
+    }
+
+    .btn-danger:hover {
+      background: #ff5c7a28;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: .78rem;
+      border-radius: 6px;
+    }
+
+    .btn-full {
+      width: 100%;
+      justify-content: center;
+    }
 
     /* ── Main layout ── */
-    .page { padding: 28px 24px; }
+    .page {
+      padding: 28px 24px;
+    }
+
     .layout {
       display: flex;
       flex-direction: column;
@@ -131,7 +205,12 @@
       gap: 12px;
       align-items: end;
     }
-    @media (max-width: 700px) { .config-strip { grid-template-columns: 1fr 1fr; } }
+
+    @media (max-width: 700px) {
+      .config-strip {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
 
     /* ── Add item row ── */
     .add-item-row {
@@ -141,7 +220,12 @@
       align-items: end;
       margin-bottom: 14px;
     }
-    @media (max-width: 800px) { .add-item-row { grid-template-columns: 1fr 1fr; } }
+
+    @media (max-width: 800px) {
+      .add-item-row {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
 
     /* ── Cards ── */
     .card {
@@ -151,176 +235,515 @@
       padding: 22px;
       box-shadow: var(--shadow);
     }
-    .card + .card { margin-top: 18px; }
-    .card-title {
-      font-size: .73rem; font-weight: 700;
-      letter-spacing: .1em; text-transform: uppercase;
-      color: var(--accent); margin-bottom: 16px;
+
+    .card+.card {
+      margin-top: 18px;
     }
-    .sep { height: 1px; background: var(--border); margin: 16px 0; }
+
+    .card-title {
+      font-size: .76rem;
+      font-weight: 700;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+
+    .sep {
+      height: 1px;
+      background: var(--border);
+      margin: 16px 0;
+    }
 
     /* ── Form ── */
-    label { display: block; font-size: .8rem; color: var(--muted); margin-bottom: 5px; font-weight: 500; }
-    input[type="number"], input[type="text"] {
+    label {
+      display: block;
+      font-size: .8rem;
+      color: var(--muted);
+      margin-bottom: 5px;
+      font-weight: 500;
+    }
+
+    input[type="number"],
+    input[type="text"] {
       width: 100%;
       background: var(--surface2);
       border: 1px solid var(--border);
-      border-radius: 8px; color: var(--text);
-      font-family: inherit; font-size: .88rem;
-      padding: 9px 13px; outline: none;
+      border-radius: 8px;
+      color: var(--text);
+      font-family: inherit;
+      font-size: .88rem;
+      padding: 9px 13px;
+      outline: none;
       transition: border-color .2s;
     }
-    input:focus { border-color: var(--accent); }
-    input[type="number"]::-webkit-inner-spin-button { opacity: .4; }
-    .form-row { margin-bottom: 14px; }
-    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    
+
+    input:focus {
+      border-color: var(--accent);
+    }
+
+    input[type="number"]::-webkit-inner-spin-button {
+      opacity: .4;
+    }
+
+    .inline-input {
+      width: 100%;
+      background: var(--surface3);
+      border: 1px solid var(--accent);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: inherit;
+      padding: 4px 6px;
+      outline: none;
+    }
+
+    .inline-input:focus {
+      border-color: var(--accent2);
+    }
+
+    .form-row {
+      margin-bottom: 14px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
     /* ── Items table ── */
-    .items-list { display: flex; flex-direction: column; gap: 0; }
+    .items-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .items-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-top: 1px solid var(--border);
+      font-size: .75rem;
+      color: var(--muted);
+    }
+
+    .page-btns {
+      display: flex;
+      gap: 4px;
+    }
+
+    .page-btn {
+      min-width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: .75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .page-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .page-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
     .items-table-header {
       display: grid;
-      grid-template-columns: 32px 130px 1fr 130px 80px 36px;
+      grid-template-columns: 32px 130px 1fr 130px 80px 64px;
       gap: 0 12px;
       padding: 7px 14px;
-      font-size: .72rem; font-weight: 700; letter-spacing: .08em;
-      text-transform: uppercase; color: var(--muted);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
       border-bottom: 1px solid var(--border);
       margin-bottom: 4px;
     }
+
     .item-card {
       display: grid;
-      grid-template-columns: 32px 130px 1fr 130px 80px 36px;
+      grid-template-columns: 32px 130px 1fr 130px 80px 64px;
       gap: 0 12px;
       align-items: center;
-      padding: 10px 14px;
+      padding: 6px 14px;
       border-bottom: 1px solid var(--border);
       transition: background .15s;
     }
-    .item-card:hover { background: var(--surface2); }
-    .item-card.done { border-color: #00d4aa33; background: #00d4aa07; }
-    .item-card.done .item-name { text-decoration: line-through; color: var(--muted); }
-    .item-card.done .item-meta { opacity: 0.5; }
-    .checkbox-wrap {
-      width: 22px; height: 22px;
-      border-radius: 6px; border: 2px solid var(--border);
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer; transition: all .2s; flex-shrink: 0;
+
+    .item-card:hover {
+      background: var(--surface2);
     }
-    .checkbox-wrap.checked { background: var(--accent2); border-color: var(--accent2); }
-    .checkbox-wrap svg { display: none; }
-    .checkbox-wrap.checked svg { display: block; }
-    .item-name { font-size: .86rem; font-weight: 500; }
+
+    .item-card.done {
+      border-color: #00d4aa33;
+      background: #00d4aa07;
+    }
+
+    .item-card.done .item-name {
+      text-decoration: line-through;
+      color: var(--muted);
+    }
+
+    .item-card.done .item-meta {
+      opacity: 0.5;
+    }
+
+    .checkbox-wrap {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all .2s;
+      flex-shrink: 0;
+    }
+
+    .checkbox-wrap.checked {
+      background: var(--accent2);
+      border-color: var(--accent2);
+    }
+
+    .checkbox-wrap svg {
+      display: none;
+    }
+
+    .checkbox-wrap.checked svg {
+      display: block;
+    }
+
+    .item-name {
+      font-size: .86rem;
+      font-weight: 500;
+    }
+
     .item-pts {
       font-size: .73rem;
-      background: #ffffff0d; border: 1px solid var(--border);
-      border-radius: 20px; padding: 2px 9px;
-      color: var(--accent); font-weight: 600; white-space: nowrap;
+      background: #ffffff0d;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 9px;
+      color: var(--accent);
+      font-weight: 600;
+      white-space: nowrap;
     }
+
     .item-day-tag {
-      font-size: .7rem; color: var(--muted);
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 20px; padding: 2px 8px; white-space: nowrap;
+      font-size: .7rem;
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 2px 8px;
+      white-space: nowrap;
     }
-    .item-del { background: none; border: none; cursor: pointer; color: var(--muted); transition: color .2s; padding: 3px; }
-    .item-del:hover { color: var(--danger); }
-    .empty { text-align: center; padding: 26px 0; color: var(--muted); font-size: .86rem; }
-    .empty svg { opacity: .3; margin-bottom: 8px; }
+
+    .item-del {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      transition: color .2s;
+      padding: 3px;
+    }
+
+    .item-del:hover {
+      color: var(--danger);
+    }
+
+    .empty {
+      text-align: center;
+      padding: 26px 0;
+      color: var(--muted);
+      font-size: .86rem;
+    }
+
+    .empty svg {
+      opacity: .3;
+      margin-bottom: 8px;
+    }
 
     /* ── Stats ── */
-    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 18px; }
-    .stat {
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: 12px; padding: 14px 16px;
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
     }
-    .stat-label { font-size: .7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 4px; }
-    .stat-value { font-size: 1.45rem; font-weight: 800; }
-    .stat-value.green { color: var(--accent2); }
-    .stat-value.purple { color: var(--accent); }
-    .stat-value.pink { color: var(--danger); }
+
+    .stat {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+
+    .stat-label {
+      font-size: .7rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-size: 1.45rem;
+      font-weight: 800;
+    }
+
+    .stat-value.green {
+      color: var(--accent2);
+    }
+
+    .stat-value.purple {
+      color: var(--accent);
+    }
+
+    .stat-value.pink {
+      color: var(--danger);
+    }
 
     /* ── Chart ── */
-    .chart-wrap { position: relative; width: 100%; height: 360px; }
-    .progress-bar-wrap { margin-top: 14px; }
-    .progress-label { display: flex; justify-content: space-between; font-size: .76rem; color: var(--muted); margin-bottom: 6px; }
-    .progress-track { height: 6px; background: var(--surface2); border-radius: 10px; overflow: hidden; }
+    .chart-wrap {
+      position: relative;
+      width: 100%;
+      height: 360px;
+    }
+
+    .progress-bar-wrap {
+      margin-top: 14px;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: .76rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .progress-track {
+      height: 6px;
+      background: var(--surface2);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
     .progress-fill {
       height: 100%;
       background: linear-gradient(90deg, var(--accent), var(--accent2));
-      border-radius: 10px; transition: width .5s cubic-bezier(.4,0,.2,1);
+      border-radius: 10px;
+      transition: width .5s cubic-bezier(.4, 0, .2, 1);
     }
 
     /* ── Sprint DB sidebar ── */
-    .sprint-list { display: flex; flex-direction: column; gap: 8px; }
+    .sprint-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
     .sprint-item {
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
       padding: 10px 14px;
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 10px; cursor: pointer;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
       transition: border-color .2s, background .2s;
     }
-    .sprint-item:hover { border-color: var(--accent); background: var(--surface3); }
-    .sprint-item.active { border-color: var(--accent); background: #6c63ff14; }
-    .sprint-item-info { flex: 1; }
-    .sprint-item-name { font-size: .88rem; font-weight: 600; margin-bottom: 2px; }
-    .sprint-item-meta { font-size: .72rem; color: var(--muted); }
-    .sprint-item-badge {
-      font-size: .68rem; font-weight: 700;
-      background: var(--accent2); color: #000;
-      border-radius: 20px; padding: 1px 8px; white-space: nowrap;
+
+    .sprint-item:hover {
+      border-color: var(--accent);
+      background: var(--surface3);
     }
-    .sprint-item-actions { display: flex; gap: 4px; margin-left: 8px; }
+
+    .sprint-item.active {
+      border-color: var(--accent);
+      background: #6c63ff14;
+    }
+
+    .sprint-item-info {
+      flex: 1;
+    }
+
+    .sprint-item-name {
+      font-size: .88rem;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .sprint-item-meta {
+      font-size: .72rem;
+      color: var(--muted);
+    }
+
+    .sprint-item-badge {
+      font-size: .68rem;
+      font-weight: 700;
+      background: var(--accent2);
+      color: #000;
+      border-radius: 20px;
+      padding: 1px 8px;
+      white-space: nowrap;
+    }
+
+    .sprint-item-actions {
+      display: flex;
+      gap: 4px;
+      margin-left: 8px;
+    }
+
     .icon-btn {
-      background: none; border: none; cursor: pointer;
-      color: var(--muted); padding: 4px; border-radius: 5px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 4px;
+      border-radius: 5px;
       transition: color .2s, background .2s;
     }
-    .icon-btn:hover.delete { color: var(--danger); }
-    .icon-btn:hover { color: var(--text); background: var(--surface3); }
+
+    .icon-btn:hover.delete {
+      color: var(--danger);
+    }
+
+    .icon-btn:hover {
+      color: var(--text);
+      background: var(--surface3);
+    }
 
     /* ── Modal ── */
     .modal-overlay {
-      display: none; position: fixed; inset: 0;
-      background: #000a; backdrop-filter: blur(4px);
-      z-index: 200; align-items: center; justify-content: center;
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000a;
+      backdrop-filter: blur(4px);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
     }
-    .modal-overlay.open { display: flex; }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
     .modal {
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: 18px;
       padding: 28px;
-      width: 100%; max-width: 420px;
+      width: 100%;
+      max-width: 420px;
       box-shadow: var(--shadow);
       animation: slideUp .2s ease;
     }
-    @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-    .modal h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 20px; }
-    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
-    .modal-actions .btn { flex: 1; justify-content: center; }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .modal h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .modal-actions .btn {
+      flex: 1;
+      justify-content: center;
+    }
 
     /* ── Scrollbar ── */
-    ::-webkit-scrollbar { width: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+    ::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 10px;
+    }
 
     /* ── Tabs ── */
-    .tabs { display: flex; gap: 4px; background: var(--surface2); border-radius: 10px; padding: 4px; margin-bottom: 18px; }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 18px;
+    }
+
     .tab {
-      flex: 1; text-align: center;
-      padding: 7px 10px; border-radius: 7px; font-size: .8rem; font-weight: 600;
-      cursor: pointer; transition: all .2s; color: var(--muted); border: none; background: none;
+      flex: 1;
+      text-align: center;
+      padding: 7px 10px;
+      border-radius: 7px;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .2s;
+      color: var(--muted);
+      border: none;
+      background: none;
       font-family: inherit;
     }
-    .tab.active { background: var(--surface3); color: var(--text); }
+
+    .tab.active {
+      background: var(--surface3);
+      color: var(--text);
+    }
   </style>
 </head>
+
 <body>
 
   <!-- ── Top Bar ── -->
   <div class="topbar">
     <div class="topbar-brand">
       <div class="topbar-logo">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5"
+          stroke-linecap="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
       </div>
       <div>
         <div class="topbar h1" style="font-size:1rem;font-weight:700;">Sprint Burndown Chart</div>
@@ -329,10 +752,16 @@
     <div class="sprint-switcher">
       <div class="sprint-select-wrap">
         <select class="sprint-select" id="sprintDropdown" onchange="switchSprint(this.value)"></select>
-        <svg class="select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        <svg class="select-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="2.5">
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
       </div>
       <button class="btn btn-primary btn-sm" onclick="openNewSprintModal()">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
         Novo Sprint
       </button>
       <button class="btn btn-ghost btn-sm" onclick="exportData()">
@@ -369,8 +798,11 @@
           </div>
           <div>
             <label>&nbsp;</label>
-            <button class="btn btn-ghost btn-sm" onclick="applyConfig()" id="applyBtn">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <button class="btn btn-primary btn-sm" onclick="applyConfig()" id="applyBtn">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
               Guardar
             </button>
           </div>
@@ -390,11 +822,11 @@
             </div>
             <div>
               <label for="itemUsName">US Name</label>
-              <input type="text" id="itemUsName" placeholder="Nome da user story..." />
+              <input type="text" id="itemUsName" placeholder="User story name..." />
             </div>
             <div>
               <label for="itemDev">Dev</label>
-              <input type="text" id="itemDev" placeholder="Dev..." />
+              <input type="text" id="itemDev" placeholder="Dev name.." />
             </div>
             <div>
               <label for="itemPts">SP</label>
@@ -402,7 +834,8 @@
             </div>
             <div>
               <label>&nbsp;</label>
-              <button class="btn btn-primary btn-sm" onclick="addItem()" style="height:36px; white-space:nowrap;">+ Add</button>
+              <button class="btn btn-primary btn-sm" id="addItemBtn" onclick="addItem()"
+                style="height:36px; white-space:nowrap;">+Add</button>
             </div>
           </div>
 
@@ -419,7 +852,10 @@
           <!-- Items -->
           <div class="items-list" id="itemsList">
             <div class="empty" id="emptyState">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
               <p>Sem itens ainda.</p>
             </div>
           </div>
@@ -563,9 +999,9 @@
       fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
         headers: { 'X-Master-Key': API_KEY }
       })
-      .then(r => r.ok ? r.json() : null)
-      .then(data => init(data ? data.record : null))
-      .catch(() => init(null)); // fallback to localStorage
+        .then(r => r.ok ? r.json() : null)
+        .then(data => init(data ? data.record : null))
+        .catch(() => init(null)); // fallback to localStorage
     });
 
     function refreshAll() {
@@ -610,9 +1046,9 @@
       }
       db.sprints.forEach(s => {
         const total = s.items.reduce((a, i) => a + i.pts, 0);
-        const done  = s.items.filter(i => i.done).reduce((a, i) => a + i.pts, 0);
-        const pct   = total ? Math.round(done / total * 100) : 0;
-        const date  = new Date(s.createdAt).toLocaleDateString('pt-PT');
+        const done = s.items.filter(i => i.done).reduce((a, i) => a + i.pts, 0);
+        const pct = total ? Math.round(done / total * 100) : 0;
+        const date = new Date(s.createdAt).toLocaleDateString('pt-PT');
 
         const div = document.createElement('div');
         div.className = 'sprint-item' + (s.id === db.activeSprint ? ' active' : '');
@@ -637,7 +1073,7 @@
     // ──────────────────────────────────────────────────────────────
     function showTab(t) {
       document.getElementById('panel-sprint').style.display = t === 'sprint' ? '' : 'none';
-      document.getElementById('panel-db').style.display    = t === 'db'     ? '' : 'none';
+      document.getElementById('panel-db').style.display = t === 'db' ? '' : 'none';
       document.getElementById('tab-sprint').classList.toggle('active', t === 'sprint');
       document.getElementById('tab-db').classList.toggle('active', t === 'db');
       if (t === 'db') populateSprintList();
@@ -649,17 +1085,17 @@
     function loadSprintForm() {
       const s = getActive(db);
       if (!s) return;
-      document.getElementById('sprintName').value    = s.name;
-      document.getElementById('sprintDays').value    = s.days;
-      document.getElementById('currentDay').value    = s.currentDay;
+      document.getElementById('sprintName').value = s.name;
+      document.getElementById('sprintDays').value = s.days;
+      document.getElementById('currentDay').value = s.currentDay;
       document.getElementById('sprintLabel').textContent = s.name;
     }
 
     function applyConfig() {
       const s = getActive(db);
       if (!s) return;
-      s.name       = document.getElementById('sprintName').value.trim() || s.name;
-      s.days       = Math.max(1, parseInt(document.getElementById('sprintDays').value) || 10);
+      s.name = document.getElementById('sprintName').value.trim() || s.name;
+      s.days = Math.max(1, parseInt(document.getElementById('sprintDays').value) || 10);
       s.currentDay = Math.min(s.days, Math.max(1, parseInt(document.getElementById('currentDay').value) || 1));
       document.getElementById('currentDay').value = s.currentDay;
       document.getElementById('sprintLabel').textContent = s.name;
@@ -674,23 +1110,55 @@
     // ──────────────────────────────────────────────────────────────
     //  Items
     // ──────────────────────────────────────────────────────────────
+    let editingItemId = null;
+
+    function editItem(id) {
+      editingItemId = id;
+      renderItems();
+    }
+
+    function cancelInlineEdit() {
+      editingItemId = null;
+      renderItems();
+    }
+
+    function saveInlineEdit(id) {
+      const s = getActive(db);
+      const item = s.items.find(i => i.id === id);
+      if (!item) return;
+
+      const newName = document.getElementById(`edit-id-${id}`).value.trim();
+      if (!newName) return; // name is required
+
+      item.name = newName;
+      item.usName = document.getElementById(`edit-us-${id}`).value.trim();
+      item.dev = document.getElementById(`edit-dev-${id}`).value.trim();
+      item.pts = Math.max(1, parseInt(document.getElementById(`edit-pts-${id}`).value) || 1);
+
+      editingItemId = null;
+      saveDB(db);
+      renderItems();
+      renderChart();
+      updateStats();
+    }
+
     function addItem() {
-      const s      = getActive(db);
-      const name   = document.getElementById('itemID').value.trim(); // used as US ID
+      const s = getActive(db);
+      const name = document.getElementById('itemID').value.trim(); // used as US ID
       const usName = document.getElementById('itemUsName').value.trim();
-      const dev    = document.getElementById('itemDev').value.trim();
-      const pts    = Math.max(1, parseInt(document.getElementById('itemPts').value) || 1);
-      
+      const dev = document.getElementById('itemDev').value.trim();
+      const pts = Math.max(1, parseInt(document.getElementById('itemPts').value) || 1);
+
       if (!name) { document.getElementById('itemID').focus(); return; }
-      
+
       s.items.push({ id: Date.now().toString(), name, usName, dev, pts, done: false, doneDay: null });
-      
-      document.getElementById('itemID').value     = '';
+
+      document.getElementById('itemID').value = '';
       document.getElementById('itemUsName').value = '';
-      document.getElementById('itemDev').value    = '';
-      document.getElementById('itemPts').value    = '1';
+      document.getElementById('itemDev').value = '';
+      document.getElementById('itemPts').value = '1';
       document.getElementById('itemID').focus();
-      
+
       saveDB(db);
       renderItems();
       renderChart();
@@ -698,10 +1166,10 @@
     }
 
     function toggleItem(id) {
-      const s    = getActive(db);
+      const s = getActive(db);
       const item = s.items.find(i => i.id === id);
       if (!item) return;
-      item.done    = !item.done;
+      item.done = !item.done;
       item.doneDay = item.done ? s.currentDay : null;
       saveDB(db);
       renderItems();
@@ -723,20 +1191,47 @@
     // ──────────────────────────────────────────────────────────────
     //  Render Items
     // ──────────────────────────────────────────────────────────────
+    const PAGE_SIZE = 15;
+    let currentPage = 1;
+
     function renderItems() {
-      const s     = getActive(db);
-      const list  = document.getElementById('itemsList');
+      const s = getActive(db);
+      const list = document.getElementById('itemsList');
       const empty = document.getElementById('emptyState');
-      list.querySelectorAll('.item-card').forEach(el => el.remove());
+      list.querySelectorAll('.item-card, .items-pagination').forEach(el => el.remove());
+      list.style.maxHeight = '';
 
       if (!s || s.items.length === 0) { empty.style.display = 'block'; return; }
       empty.style.display = 'none';
 
-      s.items.forEach(item => {
+      const total = s.items.length;
+      const pages = Math.ceil(total / PAGE_SIZE);
+      if (currentPage > pages) currentPage = pages;
+
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const end = Math.min(start + PAGE_SIZE, total);
+      const slice = s.items.slice(start, end);
+
+      slice.forEach(item => {
         const card = document.createElement('div');
         card.className = 'item-card' + (item.done ? ' done' : '');
-
-        card.innerHTML = `
+        card.innerHTML = (editingItemId === item.id) ? `
+          <div class="checkbox-wrap ${item.done ? 'checked' : ''}" style="cursor:default; opacity:0.5;">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <input type="text" class="inline-input" id="edit-id-${item.id}" value="${escHtml(item.name)}" style="font-weight:600; font-size:.88rem;" />
+          <input type="text" class="inline-input" id="edit-us-${item.id}" value="${escHtml(item.usName || '')}" style="font-size:.85rem;" placeholder="US Name" />
+          <input type="text" class="inline-input" id="edit-dev-${item.id}" value="${escHtml(item.dev || '')}" style="font-size:.85rem;" placeholder="Dev" />
+          <input type="number" class="inline-input" id="edit-pts-${item.id}" value="${item.pts}" style="text-align:center;" min="1" />
+          <div style="display:flex; gap:2px;">
+            <button class="item-del" style="color:var(--accent2);" onclick="saveInlineEdit('${item.id}')" title="Guardar">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </button>
+            <button class="item-del" onclick="cancelInlineEdit()" title="Cancelar">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        ` : `
           <div class="checkbox-wrap ${item.done ? 'checked' : ''}" onclick="toggleItem('${item.id}')">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
@@ -744,27 +1239,53 @@
           <span class="item-meta" style="font-size:.85rem;">${escHtml(item.usName || '—')}</span>
           <span class="item-meta" style="font-size:.85rem;">${escHtml(item.dev || '—')}</span>
           <span class="item-pts" style="text-align:center;">${item.pts} SP</span>
-          <button class="item-del" onclick="deleteItem('${item.id}')">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
+          <div style="display:flex; gap:2px;">
+            <button class="item-del" onclick="editItem('${item.id}')" title="Editar">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+            <button class="item-del" onclick="deleteItem('${item.id}')" title="Apagar">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
         `;
         list.insertBefore(card, empty);
       });
+
+      // Pagination footer
+      const pag = document.createElement('div');
+      pag.className = 'items-pagination';
+
+      // Page buttons
+      let btns = '';
+      for (let p = 1; p <= pages; p++) {
+        btns += `<button class="page-btn${p === currentPage ? ' active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+      }
+
+      pag.innerHTML = `
+        <span>A mostrar ${start + 1}–${end} de ${total} itens</span>
+        <div class="page-btns">${btns}</div>
+      `;
+      list.insertBefore(pag, empty);
+    }
+
+    function goToPage(p) {
+      currentPage = p;
+      renderItems();
     }
 
     // ──────────────────────────────────────────────────────────────
     //  Stats
     // ──────────────────────────────────────────────────────────────
     function updateStats() {
-      const s     = getActive(db);
+      const s = getActive(db);
       const items = s ? s.items : [];
       const total = items.reduce((a, i) => a + i.pts, 0);
-      const done  = items.filter(i => i.done).reduce((a, i) => a + i.pts, 0);
-      const left  = total - done;
-      const pct   = total ? Math.round(done / total * 100) : 0;
-      document.getElementById('statTotal').textContent   = total;
-      document.getElementById('statDone').textContent    = done;
-      document.getElementById('statLeft').textContent    = left;
+      const done = items.filter(i => i.done).reduce((a, i) => a + i.pts, 0);
+      const left = total - done;
+      const pct = total ? Math.round(done / total * 100) : 0;
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statDone').textContent = done;
+      document.getElementById('statLeft').textContent = left;
       document.getElementById('progressPct').textContent = pct + '%';
       document.getElementById('progressFill').style.width = pct + '%';
     }
@@ -773,11 +1294,11 @@
     //  Chart
     // ──────────────────────────────────────────────────────────────
     function renderChart() {
-      const s      = getActive(db);
-      const days   = s ? s.days : 10;
+      const s = getActive(db);
+      const days = s ? s.days : 10;
       const curDay = s ? s.currentDay : 0;
-      const items  = s ? s.items : [];
-      const total  = items.reduce((a, i) => a + i.pts, 0);
+      const items = s ? s.items : [];
+      const total = items.reduce((a, i) => a + i.pts, 0);
 
       // Labels: Início + Dia 1..N
       const labels = ['Início', ...Array.from({ length: days }, (_, i) => `Dia ${i + 1}`)];
@@ -883,9 +1404,9 @@
     // ──────────────────────────────────────────────────────────────
     function openNewSprintModal() {
       const n = db.sprints.length + 1;
-      document.getElementById('newSprintName').value    = `Sprint ${n}`;
-      document.getElementById('newSprintDays').value    = '10';
-      document.getElementById('newCurrentDay').value    = '0';
+      document.getElementById('newSprintName').value = `Sprint ${n}`;
+      document.getElementById('newSprintDays').value = '10';
+      document.getElementById('newCurrentDay').value = '0';
       document.getElementById('modalOverlay').classList.add('open');
       setTimeout(() => document.getElementById('newSprintName').select(), 100);
     }
@@ -896,8 +1417,8 @@
     function createSprint() {
       const name = document.getElementById('newSprintName').value.trim() || `Sprint ${db.sprints.length + 1}`;
       const days = Math.max(1, parseInt(document.getElementById('newSprintDays').value) || 10);
-      const cur  = Math.min(days, Math.max(1, parseInt(document.getElementById('newCurrentDay').value) || 1));
-      const s    = newSprintObj(name, days, cur);
+      const cur = Math.min(days, Math.max(1, parseInt(document.getElementById('newCurrentDay').value) || 1));
+      const s = newSprintObj(name, days, cur);
       db.sprints.push(s);
       db.activeSprint = s.id;
       saveDB(db);
@@ -921,7 +1442,7 @@
     //  Helpers
     // ──────────────────────────────────────────────────────────────
     function escHtml(s) {
-      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
     function exportData() {
       const data = loadLocalDB();
@@ -941,4 +1462,5 @@
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
   </script>
 </body>
+
 </html>
