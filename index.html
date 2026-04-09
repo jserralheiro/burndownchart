@@ -265,7 +265,8 @@
     }
 
     input[type="number"],
-    input[type="text"] {
+    input[type="text"],
+    textarea {
       width: 100%;
       background: var(--surface2);
       border: 1px solid var(--border);
@@ -276,9 +277,10 @@
       padding: 9px 13px;
       outline: none;
       transition: border-color .2s;
+      resize: vertical;
     }
 
-    input:focus {
+    input:focus, textarea:focus {
       border-color: var(--accent);
     }
 
@@ -363,7 +365,7 @@
 
     .items-table-header {
       display: grid;
-      grid-template-columns: 32px 130px 1fr 130px 80px 64px;
+      grid-template-columns: 32px 130px 1fr 130px 80px 84px;
       gap: 0 12px;
       padding: 7px 14px;
       font-size: .72rem;
@@ -377,7 +379,7 @@
 
     .item-card {
       display: grid;
-      grid-template-columns: 32px 130px 1fr 130px 80px 64px;
+      grid-template-columns: 32px 130px 1fr 130px 80px 84px;
       gap: 0 12px;
       align-items: center;
       padding: 6px 14px;
@@ -888,7 +890,12 @@
       </div>
 
       <div class="card">
-        <div class="card-title">📉 Burndown — <span id="sprintLabel">—</span></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div class="card-title" style="margin-bottom: 0;">📉 Burndown — <span id="sprintLabel">—</span></div>
+          <select id="devFilter" class="sprint-select" onchange="filterByDev(this.value)" style="min-width: 140px; padding: 6px 10px; font-size: .75rem; border-radius: 6px;">
+            <option value="all">Todos os Devs</option>
+          </select>
+        </div>
         <div class="chart-wrap">
           <canvas id="burndownChart"></canvas>
         </div>
@@ -927,6 +934,21 @@
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
         <button class="btn btn-primary" onclick="createSprint()">Criar Sprint</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Comment Modal ── -->
+  <div class="modal-overlay" id="commentModalOverlay" onclick="closeCommentModalOutside(event)">
+    <div class="modal">
+      <h2>💬 Comentários do Item</h2>
+      <div class="form-row">
+        <label for="itemComment">Notas Adicionais</label>
+        <textarea id="itemComment" rows="5" placeholder="Escreve aqui as anotações, detalhes técnicos ou links úteis..."></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeCommentModal()">Cancelar</button>
+        <button class="btn btn-primary" onclick="saveComment()">Guardar Comentário</button>
       </div>
     </div>
   </div>
@@ -1009,6 +1031,7 @@
       populateDropdown();
       populateSprintList();
       loadSprintForm();
+      updateDevFilterDropdown();
       renderItems();
       renderChart();
       updateStats();
@@ -1109,6 +1132,53 @@
     }
 
     // ──────────────────────────────────────────────────────────────
+    //  Filtro por Dev
+    // ──────────────────────────────────────────────────────────────
+    let selectedDevFilter = 'all';
+
+    function getFilteredItems() {
+      const s = getActive(db);
+      if (!s) return [];
+      if (selectedDevFilter === 'all') return s.items;
+      return s.items.filter(i => i.dev && i.dev.trim() === selectedDevFilter);
+    }
+
+    function updateDevFilterDropdown() {
+      const s = getActive(db);
+      const select = document.getElementById('devFilter');
+      const currentVal = selectedDevFilter;
+      
+      const devs = new Set();
+      if (s) {
+        s.items.forEach(i => {
+          const d = i.dev ? i.dev.trim() : '';
+          if (d) devs.add(d);
+        });
+      }
+      
+      let html = `<option value="all">Todos os Devs</option>`;
+      Array.from(devs).sort().forEach(d => {
+        html += `<option value="${escHtml(d)}">${escHtml(d)}</option>`;
+      });
+      
+      select.innerHTML = html;
+      if (devs.has(currentVal)) {
+        select.value = currentVal;
+      } else {
+        select.value = 'all';
+        selectedDevFilter = 'all';
+      }
+    }
+
+    function filterByDev(val) {
+      selectedDevFilter = val;
+      currentPage = 1;
+      renderItems();
+      renderChart();
+      updateStats();
+    }
+
+    // ──────────────────────────────────────────────────────────────
     //  Items
     // ──────────────────────────────────────────────────────────────
     let editingItemId = null;
@@ -1138,6 +1208,7 @@
 
       editingItemId = null;
       saveDB(db);
+      updateDevFilterDropdown();
       renderItems();
       renderChart();
       updateStats();
@@ -1161,6 +1232,7 @@
       document.getElementById('itemID').focus();
 
       saveDB(db);
+      updateDevFilterDropdown();
       renderItems();
       renderChart();
       updateStats();
@@ -1184,9 +1256,47 @@
       const s = getActive(db);
       s.items = s.items.filter(i => i.id !== id);
       saveDB(db);
+      updateDevFilterDropdown();
       renderItems();
       renderChart();
       updateStats();
+    }
+
+    // ──────────────────────────────────────────────────────────────
+    //  Comments
+    // ──────────────────────────────────────────────────────────────
+    let commentItemId = null;
+
+    function openCommentModal(id) {
+      const s = getActive(db);
+      const item = s.items.find(i => i.id === id);
+      if (!item) return;
+
+      commentItemId = id;
+      document.getElementById('itemComment').value = item.comment || '';
+      document.getElementById('commentModalOverlay').classList.add('open');
+      setTimeout(() => document.getElementById('itemComment').focus(), 100);
+    }
+
+    function closeCommentModal() {
+      document.getElementById('commentModalOverlay').classList.remove('open');
+      commentItemId = null;
+    }
+
+    function closeCommentModalOutside(e) {
+      if (e.target.id === 'commentModalOverlay') closeCommentModal();
+    }
+
+    function saveComment() {
+      if (!commentItemId) return;
+      const s = getActive(db);
+      const item = s.items.find(i => i.id === commentItemId);
+      if (item) {
+        item.comment = document.getElementById('itemComment').value;
+        saveDB(db);
+        renderItems();
+      }
+      closeCommentModal();
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -1202,16 +1312,19 @@
       list.querySelectorAll('.item-card, .items-pagination').forEach(el => el.remove());
       list.style.maxHeight = '';
 
-      if (!s || s.items.length === 0) { empty.style.display = 'block'; return; }
+      const filtered = getFilteredItems();
+
+      if (!s || filtered.length === 0) { empty.style.display = 'block'; return; }
       empty.style.display = 'none';
 
-      const total = s.items.length;
+      const total = filtered.length;
       const pages = Math.ceil(total / PAGE_SIZE);
-      if (currentPage > pages) currentPage = pages;
+      if (currentPage > pages && pages > 0) currentPage = pages;
+      else if (pages === 0) currentPage = 1;
 
       const start = (currentPage - 1) * PAGE_SIZE;
       const end = Math.min(start + PAGE_SIZE, total);
-      const slice = s.items.slice(start, end);
+      const slice = filtered.slice(start, end);
 
       slice.forEach(item => {
         const card = document.createElement('div');
@@ -1241,6 +1354,9 @@
           <span class="item-meta" style="font-size:.85rem;">${escHtml(item.dev || '—')}</span>
           <span class="item-pts" style="text-align:center;">${item.pts} SP</span>
           <div style="display:flex; gap:2px;">
+            <button class="item-del" style="${item.comment ? 'color: var(--accent);' : ''}" onclick="openCommentModal('${item.id}')" title="Comentários">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="${item.comment ? 'var(--accent)' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </button>
             <button class="item-del" onclick="editItem('${item.id}')" title="Editar">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
             </button>
@@ -1279,7 +1395,7 @@
     // ──────────────────────────────────────────────────────────────
     function updateStats() {
       const s = getActive(db);
-      const items = s ? s.items : [];
+      const items = getFilteredItems();
       const total = items.reduce((a, i) => a + i.pts, 0);
       const done = items.filter(i => i.done).reduce((a, i) => a + i.pts, 0);
       const left = total - done;
@@ -1298,7 +1414,7 @@
       const s = getActive(db);
       const days = s ? s.days : 10;
       const curDay = s ? s.currentDay : 0;
-      const items = s ? s.items : [];
+      const items = getFilteredItems();
       const total = items.reduce((a, i) => a + i.pts, 0);
 
       // Labels: Início + Dia 1..N
