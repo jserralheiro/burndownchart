@@ -844,7 +844,9 @@
 
           <!-- Table header -->
           <div class="items-table-header">
-            <span></span>
+            <div class="checkbox-wrap" id="selectAllWrap" onclick="toggleAllItems()">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
             <span>US ID</span>
             <span>US Name</span>
             <span>Dev</span>
@@ -1261,6 +1263,24 @@
       updateStats();
     }
 
+    function toggleAllItems() {
+      const s = getActive(db);
+      if (!s) return;
+      const filtered = getFilteredItems();
+      if (filtered.length === 0) return;
+      
+      const allDone = filtered.every(i => i.done);
+      filtered.forEach(item => {
+        item.done = !allDone;
+        item.doneDay = item.done ? s.currentDay : null;
+      });
+      
+      saveDB(db);
+      renderItems();
+      renderChart();
+      updateStats();
+    }
+
 
 
     function deleteItem(id) {
@@ -1324,9 +1344,19 @@
       list.style.maxHeight = '';
 
       const filtered = getFilteredItems();
+      const selectAllWrap = document.getElementById('selectAllWrap');
 
-      if (!s || filtered.length === 0) { empty.style.display = 'block'; return; }
+      if (!s || filtered.length === 0) { 
+        empty.style.display = 'block'; 
+        if(selectAllWrap) selectAllWrap.classList.remove('checked');
+        return; 
+      }
       empty.style.display = 'none';
+
+      if(selectAllWrap) {
+        if (filtered.every(i => i.done)) selectAllWrap.classList.add('checked');
+        else selectAllWrap.classList.remove('checked');
+      }
 
       const total = filtered.length;
       const pages = Math.ceil(total / PAGE_SIZE);
