@@ -833,7 +833,7 @@
             </div>
             <div>
               <label for="itemPts">SP</label>
-              <input type="number" id="itemPts" min="1" max="100" value="1" />
+              <input type="number" id="itemPts" min="0" max="100" />
             </div>
             <div>
               <label>&nbsp;</label>
@@ -1210,7 +1210,9 @@
       item.name = newName;
       item.usName = document.getElementById(`edit-us-${id}`).value.trim();
       item.dev = document.getElementById(`edit-dev-${id}`).value.trim();
-      item.pts = Math.max(1, parseInt(document.getElementById(`edit-pts-${id}`).value) || 1);
+      
+      const ptsVal = document.getElementById(`edit-pts-${id}`).value.trim();
+      item.pts = Math.max(0, parseInt(ptsVal) || 0);
 
       editingItemId = null;
       saveDB(db);
@@ -1225,16 +1227,19 @@
       const name = document.getElementById('itemID').value.trim(); // used as US ID
       const usName = document.getElementById('itemUsName').value.trim();
       const dev = document.getElementById('itemDev').value.trim();
-      const pts = Math.max(1, parseInt(document.getElementById('itemPts').value) || 1);
+      
+      const ptsVal = document.getElementById('itemPts').value.trim();
 
       if (!name) { document.getElementById('itemID').focus(); return; }
+      
+      const pts = Math.max(0, parseInt(ptsVal) || 0);
 
       s.items.push({ id: Date.now().toString(), name, usName, dev, pts, done: false, doneDay: null });
 
       document.getElementById('itemID').value = '';
       document.getElementById('itemUsName').value = '';
       document.getElementById('itemDev').value = '';
-      document.getElementById('itemPts').value = '1';
+      document.getElementById('itemPts').value = '';
       document.getElementById('itemID').focus();
 
       saveDB(db);
@@ -1342,7 +1347,7 @@
           <input type="text" class="inline-input" id="edit-id-${item.id}" value="${escHtml(item.name)}" style="font-weight:600; font-size:.88rem;" />
           <input type="text" class="inline-input" id="edit-us-${item.id}" value="${escHtml(item.usName || '')}" style="font-size:.85rem;" placeholder="US Name" />
           <input type="text" class="inline-input" id="edit-dev-${item.id}" value="${escHtml(item.dev || '')}" style="font-size:.85rem;" placeholder="Dev" />
-          <input type="number" class="inline-input" id="edit-pts-${item.id}" value="${item.pts}" style="text-align:center;" min="1" />
+          <input type="number" class="inline-input" id="edit-pts-${item.id}" value="${item.pts}" style="text-align:center;" min="0" />
           <div style="display:flex; gap:2px;">
             <button class="item-del" style="color:var(--accent2);" onclick="saveInlineEdit('${item.id}')" title="Guardar">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
