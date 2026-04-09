@@ -1139,8 +1139,14 @@
     function getFilteredItems() {
       const s = getActive(db);
       if (!s) return [];
-      if (selectedDevFilter === 'all') return s.items;
-      return s.items.filter(i => i.dev && i.dev.trim() === selectedDevFilter);
+      
+      let items = s.items;
+      if (selectedDevFilter !== 'all') {
+        items = s.items.filter(i => i.dev && i.dev.trim() === selectedDevFilter);
+      }
+      
+      // Ordenar alfabeticamente/numericamente pelo US ID (name) de forma crescente
+      return items.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
     }
 
     function updateDevFilterDropdown() {
