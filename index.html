@@ -1011,22 +1011,30 @@
     let chart = null;
 
     window.addEventListener('DOMContentLoaded', () => {
-      const init = (serverData) => {
-        db = initDB(serverData);
-        refreshAll();
+      const bindKeys = () => {
         document.getElementById('itemID').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
         document.getElementById('itemUsName').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
         document.getElementById('itemDev').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
         document.getElementById('newSprintName').addEventListener('keydown', e => { if (e.key === 'Enter') createSprint(); });
       };
 
-      // Try to load from JSONBin.io first (Cloud Sync)
+      // 1. Show local data INSTANTLY (no waiting)
+      db = initDB(null);
+      refreshAll();
+      bindKeys();
+
+      // 2. Sync from cloud in background (silent update)
       fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
         headers: { 'X-Master-Key': API_KEY }
       })
         .then(r => r.ok ? r.json() : null)
-        .then(data => init(data ? data.record : null))
-        .catch(() => init(null)); // fallback to localStorage
+        .then(data => {
+          if (data && data.record) {
+            db = initDB(data.record);
+            refreshAll();
+          }
+        })
+        .catch(() => {}); // local data already showing, ignore errors
     });
 
     function refreshAll() {
