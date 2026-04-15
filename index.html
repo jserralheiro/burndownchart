@@ -988,9 +988,18 @@
       // Prefer server data (most up-to-date), fallback to localStorage
       let db = serverData || loadLocalDB();
       if (!db || !db.sprints || db.sprints.length === 0) {
-        const first = newSprintObj('Sprint 1', 10, 1);
-        db = { activeSprint: first.id, sprints: [first] };
-        saveDB(db);
+        if (serverData === null) {
+          // Only create a default sprint when we KNOW there's no server data
+          // (i.e., this is a truly fresh start, not just a slow network)
+          const first = newSprintObj('Sprint 1', 10, 1);
+          db = { activeSprint: first.id, sprints: [first] };
+          // DON'T saveDB here — wait for cloud check to complete first
+        } else {
+          // Server returned empty — safe to create default and save
+          const first = newSprintObj('Sprint 1', 10, 1);
+          db = { activeSprint: first.id, sprints: [first] };
+          saveDB(db);
+        }
       } else if (serverData) {
         // Sync server data to localStorage so offline still works
         localStorage.setItem(DB_KEY, JSON.stringify(db));
