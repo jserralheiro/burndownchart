@@ -303,6 +303,70 @@
       border-color: var(--accent2);
     }
 
+    /* Flag indicator */
+    .flag-dot-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+      padding: 3px;
+      color: #ef4444;
+    }
+
+    .flag-tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface3);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: .75rem;
+      color: var(--text);
+      white-space: nowrap;
+      z-index: 100;
+      box-shadow: 0 4px 16px rgba(0,0,0,.4);
+      line-height: 1.7;
+    }
+    .flag-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: var(--border);
+    }
+    .flag-dot-wrap:hover .flag-tooltip {
+      display: block;
+    }
+
+    /* Flag checkboxes in modal */
+    .flag-checks {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      margin-bottom: 14px;
+    }
+    .flag-checks label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .82rem;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .flag-checks input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 15px;
+      height: 15px;
+      cursor: pointer;
+    }
+
     .form-row {
       margin-bottom: 14px;
     }
@@ -945,12 +1009,21 @@
     <div class="modal">
       <h2>💬 Comentários do Item</h2>
       <div class="form-row">
+        <label style="margin-bottom:6px; display:block;">Flags</label>
+        <div class="flag-checks">
+          <label><input type="checkbox" id="flagSpChanged" /> ⚡ Alteração de SP</label>
+          <label><input type="checkbox" id="flagReassigned" /> 👤 Mudança de Assignee</label>
+          <label><input type="checkbox" id="flagHelp" /> 🤝 Teve ajuda</label>
+          <label><input type="checkbox" id="flagScopeCreep" /> ⚠️ Adicionado a meio</label>
+        </div>
+      </div>
+      <div class="form-row">
         <label for="itemComment">Notas Adicionais</label>
         <textarea id="itemComment" rows="5" placeholder="Escreve aqui as anotações, detalhes técnicos ou links úteis..."></textarea>
       </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeCommentModal()">Cancelar</button>
-        <button class="btn btn-primary" onclick="saveComment()">Guardar Comentário</button>
+        <button class="btn btn-primary" onclick="saveComment()">Guardar</button>
       </div>
     </div>
   </div>
@@ -1315,6 +1388,23 @@
     // ──────────────────────────────────────────────────────────────
     let commentItemId = null;
 
+    const FLAG_DEFS = [
+      { key: 'sp_changed',  elId: 'flagSpChanged',  label: '⚡ Alteração de SP' },
+      { key: 'reassigned',  elId: 'flagReassigned',  label: '👤 Mudança de Assignee' },
+      { key: 'help',        elId: 'flagHelp',        label: '🤝 Teve ajuda' },
+      { key: 'scope_creep', elId: 'flagScopeCreep',  label: '⚠️ Adicionado a meio' }
+    ];
+
+    function getFlagDotHtml(item) {
+      const flags = item.flags || [];
+      if (flags.length === 0) return '';
+      const labels = flags.map(f => {
+        const def = FLAG_DEFS.find(d => d.key === f);
+        return def ? def.label : f;
+      }).join('<br>');
+      return `<span class="flag-dot-wrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg><span class="flag-tooltip">${labels}</span></span>`;
+    }
+
     function openCommentModal(id) {
       const s = getActive(db);
       const item = s.items.find(i => i.id === id);
@@ -1322,8 +1412,14 @@
 
       commentItemId = id;
       document.getElementById('itemComment').value = item.comment || '';
+
+      // Populate flag checkboxes
+      const flags = item.flags || [];
+      FLAG_DEFS.forEach(f => {
+        document.getElementById(f.elId).checked = flags.includes(f.key);
+      });
+
       document.getElementById('commentModalOverlay').classList.add('open');
-      setTimeout(() => document.getElementById('itemComment').focus(), 100);
     }
 
     function closeCommentModal() {
@@ -1341,6 +1437,12 @@
       const item = s.items.find(i => i.id === commentItemId);
       if (item) {
         item.comment = document.getElementById('itemComment').value;
+
+        // Collect active flags
+        item.flags = FLAG_DEFS
+          .filter(f => document.getElementById(f.elId).checked)
+          .map(f => f.key);
+
         saveDB(db);
         renderItems();
       }
@@ -1411,7 +1513,7 @@
           <span class="item-meta" style="font-size:.85rem;">${escHtml(item.usName || '—')}</span>
           <span class="item-meta" style="font-size:.85rem;">${escHtml(item.dev || '—')}</span>
           <span class="item-pts" style="text-align:center;">${item.pts} SP</span>
-          <div style="display:flex; gap:2px;">
+          <div style="display:flex; gap:2px; align-items:center;">
             <button class="item-del" style="${item.comment ? 'color: var(--accent);' : ''}" onclick="openCommentModal('${item.id}')" title="Comentários">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="${item.comment ? 'var(--accent)' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             </button>
@@ -1421,6 +1523,7 @@
             <button class="item-del" onclick="deleteItem('${item.id}')" title="Apagar">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
+            ${getFlagDotHtml(item)}
           </div>
         `;
         list.insertBefore(card, empty);
