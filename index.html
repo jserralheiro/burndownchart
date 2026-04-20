@@ -1838,12 +1838,13 @@
       // UTF-8 BOM so Excel automatically recognizes characters like á, ç, etc.
       let csv = '\uFEFF';
       // ';' delimiter for Excel PT
-      csv += 'US ID;US Name;Dev;SP;Status;Dia;Flags;Notas\n';
+      csv += 'US ID;US Name;Dev;SP;Status;Dia;Flags;Spillover;Notas\n';
       
       sprint.items.forEach(item => {
         const estado = item.done ? 'Concluído' : 'Aberto';
         const dia = item.doneDay ? item.doneDay : '';
         const flags = (item.flags || []).join(', ');
+        const spillover = isSpillover(item) ? 'Sim' : 'Não';
         
         // Escape fields to avoid delimiter collisions
         const escapeField = (f) => {
@@ -1859,6 +1860,7 @@
           estado,
           dia,
           escapeField(flags),
+          spillover,
           escapeField(item.comment)
         ].join(';') + '\n';
       });
