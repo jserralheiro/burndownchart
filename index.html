@@ -1135,13 +1135,15 @@
     function populateDropdown() {
       const sel = document.getElementById('sprintDropdown');
       sel.innerHTML = '';
-      db.sprints.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.id;
-        opt.textContent = s.name;
-        opt.selected = s.id === db.activeSprint;
-        sel.appendChild(opt);
-      });
+      [...db.sprints]
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+        .forEach(s => {
+          const opt = document.createElement('option');
+          opt.value = s.id;
+          opt.textContent = s.name;
+          opt.selected = s.id === db.activeSprint;
+          sel.appendChild(opt);
+        });
     }
 
     function switchSprint(id) {
@@ -1160,8 +1162,10 @@
         list.innerHTML = '<div class="empty"><p>Sem sprints criados.</p></div>';
         return;
       }
-      db.sprints.forEach(s => {
-        const total = s.items.reduce((a, i) => a + i.pts, 0);
+      [...db.sprints]
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+        .forEach(s => {
+          const total = s.items.reduce((a, i) => a + i.pts, 0);
         const done = s.items.filter(i => i.done).reduce((a, i) => a + i.pts, 0);
         const pct = total ? Math.round(done / total * 100) : 0;
         const date = new Date(s.createdAt).toLocaleDateString('pt-PT');
@@ -1405,6 +1409,24 @@
       return `<span class="flag-dot-wrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg><span class="flag-tooltip">${labels}</span></span>`;
     }
 
+    function isSpillover(item) {
+      if (!db || !db.sprints) return false;
+      const currentSprint = getActive(db);
+      if (!currentSprint) return false;
+      
+      const currentIdNum = Number(currentSprint.id);
+      
+      for (const sprint of db.sprints) {
+        const sprintIdNum = Number(sprint.id);
+        if (sprintIdNum < currentIdNum) {
+          if (sprint.items.some(i => i.name === item.name)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
     function openCommentModal(id) {
       const s = getActive(db);
       const item = s.items.find(i => i.id === id);
@@ -1509,7 +1531,7 @@
           <div class="checkbox-wrap ${item.done ? 'checked' : ''}" onclick="toggleItem('${item.id}')">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <span class="item-name" style="font-weight:600; font-size:.88rem;">${escHtml(item.name)}</span>
+          <span class="item-name" style="font-weight:600; font-size:.88rem;">${escHtml(item.name)}${isSpillover(item) ? ' <span title="Spillover de sprint passado" style="cursor:help; font-size: 0.85rem; margin-left: 4px;">⏪</span>' : ''}</span>
           <span class="item-meta" style="font-size:.85rem;">${escHtml(item.usName || '—')}</span>
           <span class="item-meta" style="font-size:.85rem;">${escHtml(item.dev || '—')}</span>
           <span class="item-pts" style="text-align:center;">${item.pts} SP</span>
