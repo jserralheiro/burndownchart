@@ -351,8 +351,8 @@
       align-items: center;
       cursor: help;
       margin-left: 6px;
+      margin-right: 24px;
       font-size: 0.85rem;
-      transform: translateY(1px);
     }
 
     /* Flag checkboxes in modal */
@@ -469,6 +469,14 @@
     .item-card.done {
       border-color: #00d4aa33;
       background: #00d4aa07;
+    }
+    
+    .item-name {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-weight: 600;
+      font-size: .88rem;
     }
 
     .item-card.done .item-name {
@@ -1608,7 +1616,7 @@
           <div class="checkbox-wrap ${item.done ? 'checked' : ''}" onclick="toggleItem('${item.id}')">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <span class="item-name" style="font-weight:600; font-size:.88rem; display:inline-flex; align-items:center;">${escHtml(item.name)}${isSpillover(item) ? '<span class="spillover-wrap">⏪<span class="flag-tooltip">Spillover de sprint passado</span></span>' : ''}</span>
+          <span class="item-name"><span>${escHtml(item.name)}</span>${isSpillover(item) ? '<span class="spillover-wrap">⏪<span class="flag-tooltip">Spillover de sprint passado</span></span>' : ''}</span>
           <span class="item-meta" style="font-size:.85rem;">${escHtml(item.usName || '—')}</span>
           <span class="item-meta" style="font-size:.85rem;">${escHtml(item.dev || '—')}</span>
           <span class="item-pts" style="text-align:center;">${item.pts} SP</span>
