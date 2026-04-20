@@ -1113,8 +1113,12 @@
     //  Fallback: localStorage (Offline safe)
     //  Structure: { activeSprint: id, sprints: [ { id, name, days, currentDay, items[], createdAt } ] }
     // ──────────────────────────────────────────────────────────────
-    const DB_KEY = 'burndown_db';
-    const BIN_ID = '69d3d50daaba882197cd3fbd';
+    // Deteta se o utilizador está a desenvolver localmente via localhost ou file:// (Port 8000 é o proxy de "camuflagem" para Prod)
+    const IS_DEV = (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '8000';
+    
+    // Separa a base de dados Local da Oficial de Produção
+    const DB_KEY = IS_DEV ? 'burndown_db_dev' : 'burndown_db';
+    const BIN_ID = IS_DEV ? '69e69213aaba8821971d5604' : '69d3d50daaba882197cd3fbd';
     const API_KEY = '$2a$10$b1zk.UlxUmhefLmBtQ66DOhVPYpHQN6tYqtixNMQrAJGBDCWlYxey';
 
     function loadLocalDB() {
