@@ -594,6 +594,50 @@
       color: var(--danger);
     }
 
+    /* ── Dropdown Menu ── */
+    .dropdown-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+    .dropdown-menu {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 6px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      z-index: 200;
+      min-width: 170px;
+      overflow: hidden;
+      flex-direction: column;
+    }
+    .dropdown-menu.open {
+      display: flex;
+    }
+    .dropdown-item {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      padding: 10px 14px;
+      text-align: left;
+      font-family: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .dropdown-item:hover {
+      background: var(--surface3);
+    }
+    .dropdown-item:not(:last-child) {
+      border-bottom: 1px solid var(--border);
+    }
+
     /* ── Chart ── */
     .chart-wrap {
       position: relative;
@@ -838,9 +882,21 @@
         </svg>
         Novo Sprint
       </button>
-      <button class="btn btn-ghost btn-sm" onclick="exportData()">
-        📥 Exportar
-      </button>
+      <div class="dropdown-wrapper">
+        <button class="btn btn-ghost btn-sm" onclick="toggleExportMenu(event)">
+          📥 Exportar
+        </button>
+        <div class="dropdown-menu" id="exportMenu">
+          <button class="dropdown-item" onclick="exportDataJson()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 16 12 20 8 16"></polyline><line x1="12" y1="12" x2="12" y2="20"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="16 16 12 20 8 16"></polyline></svg>
+            Exportar para JSON
+          </button>
+          <button class="dropdown-item" onclick="exportDataExcel()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Exportar para Excel
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1125,6 +1181,12 @@
           }
         })
         .catch(() => {}); // local data already showing, ignore errors
+
+      // Allow clicking outside to close dropdowns
+      document.addEventListener('click', () => {
+        const menu = document.getElementById('exportMenu');
+        if (menu && menu.classList.contains('open')) menu.classList.remove('open');
+      });
     });
 
     function refreshAll() {
@@ -1752,13 +1814,59 @@
     function escHtml(s) {
       return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
-    function exportData() {
+    function toggleExportMenu(e) {
+      e.stopPropagation();
+      const menu = document.getElementById('exportMenu');
+      menu.classList.toggle('open');
+    }
+    
+    function exportDataJson() {
       const data = loadLocalDB();
       if (!data) return alert('Não há dados para exportar.');
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'data.json';
+      a.click();
+    }
+
+    function exportDataExcel() {
+      const dbData = loadLocalDB();
+      const sprint = getActive(dbData);
+      if (!sprint || sprint.items.length === 0) return alert('Não há tarefas no sprint atual para exportar.');
+      
+      // UTF-8 BOM so Excel automatically recognizes characters like á, ç, etc.
+      let csv = '\uFEFF';
+      // ';' delimiter for Excel PT
+      csv += 'US ID;US Name;Dev;SP;Status;Dia;Flags;Notas\n';
+      
+      sprint.items.forEach(item => {
+        const estado = item.done ? 'Concluído' : 'Aberto';
+        const dia = item.doneDay ? item.doneDay : '';
+        const flags = (item.flags || []).join(', ');
+        
+        // Escape fields to avoid delimiter collisions
+        const escapeField = (f) => {
+          if (!f) return '""';
+          return `"${String(f).replace(/"/g, '""')}"`;
+        };
+        
+        csv += [
+          escapeField(item.name),
+          escapeField(item.usName),
+          escapeField(item.dev),
+          item.pts,
+          estado,
+          dia,
+          escapeField(flags),
+          escapeField(item.comment)
+        ].join(';') + '\n';
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `sprint_${sprint.id}_export.csv`;
       a.click();
     }
     function pulse(id) {
