@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
     :root {
       --bg: #0d0f1a;
@@ -881,7 +882,10 @@
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
         Novo Sprint
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importExcelInput').click()">
+        📂 Importar
       </button>
+      <input type="file" id="importExcelInput" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" style="display:none" onchange="importDataExcel(event)" />
       <div class="dropdown-wrapper">
         <button class="btn btn-ghost btn-sm" onclick="toggleExportMenu(event)">
           📥 Exportar
@@ -1480,6 +1484,7 @@
     }
 
     function isSpillover(item) {
+      if (item.forceSpillover) return true;
       if (!db || !db.sprints) return false;
       const currentSprint = getActive(db);
       if (!currentSprint) return false;
@@ -1870,6 +1875,104 @@
       a.href = URL.createObjectURL(blob);
       a.download = `sprint_${sprint.id}_export.csv`;
       a.click();
+    }
+
+    function importDataExcel(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+          if (!rows || rows.length < 2) { 
+            alert('O ficheiro não contém dados válidos.'); 
+            event.target.value = ''; 
+            return; 
+          }
+
+          const s = getActive(db);
+          let added = 0;
+
+          const headers = (rows[0] || []).map(h => h ? h.toString().trim().toLowerCase() : '');
+          const getIdx = (name) => headers.findIndex(h => h.includes(name));
+
+          const idIdx = getIdx('us id');
+          const nameIdx = getIdx('name');
+          const devIdx = getIdx('dev');
+          const spIdx = getIdx('sp');
+          const notasIdx = getIdx('nota');
+          const spillIdx = getIdx('spillover');
+          const flagsIdx = getIdx('flag');
+
+          if (idIdx === -1) { 
+            alert('Coluna "US ID" não encontrada no ficheiro.'); 
+            event.target.value = ''; 
+            return; 
+          }
+
+          for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length === 0) continue;
+
+            const usId = row[idIdx] ? row[idIdx].toString().trim() : '';
+            if (!usId) continue;
+
+            const usName = (nameIdx !== -1 && row[nameIdx]) ? row[nameIdx].toString().trim() : '';
+            const dev = (devIdx !== -1 && row[devIdx]) ? row[devIdx].toString().trim() : '';
+            const sp = (spIdx !== -1 && row[spIdx]) ? parseFloat(row[spIdx]) || 0 : 0;
+            const notas = (notasIdx !== -1 && row[notasIdx]) ? row[notasIdx].toString().trim() : '';
+            const spilloverText = (spillIdx !== -1 && row[spillIdx]) ? row[spillIdx].toString().trim().toLowerCase() : '';
+            const flagsStr = (flagsIdx !== -1 && row[flagsIdx]) ? row[flagsIdx].toString().trim().toLowerCase() : '';
+
+            const item = {
+              id: Date.now().toString() + Math.floor(Math.random() * 10000),
+              name: usId,
+              usName: usName,
+              dev: dev,
+              pts: sp,
+              done: false,
+              doneDay: null,
+              comment: notas,
+              flags: []
+            };
+
+            if (spilloverText === 'sim' || spilloverText === 'true' || spilloverText === '1') {
+              item.forceSpillover = true;
+            }
+
+            if (flagsStr) {
+              FLAG_DEFS.forEach(f => {
+                if (flagsStr.includes(f.label.toLowerCase()) || flagsStr.includes(f.key.toLowerCase())) {
+                  if (!item.flags.includes(f.key)) item.flags.push(f.key);
+                }
+              });
+            }
+            s.items.push(item);
+            added++;
+          }
+
+          if (added > 0) {
+            saveDB(db);
+            refreshAll();
+            alert(`Foram importados \${added} itens com sucesso!`);
+          } else {
+            alert('Nenhum item válido encontrado para importar.');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Erro ao processar ficheiro Excel. Verifica se o ficheiro é válido.');
+        } finally {
+          event.target.value = ''; // Reset file input
+        }
+      };
+      
+      reader.readAsArrayBuffer(file);
     }
     function pulse(id) {
       const el = document.getElementById(id);
