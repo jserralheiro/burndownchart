@@ -1160,6 +1160,7 @@
     const DB_KEY = IS_DEV ? 'burndown_db_dev' : 'burndown_db';
     const BIN_ID = IS_DEV ? '69e69213aaba8821971d5604' : '69d3d50daaba882197cd3fbd';
     const API_KEY = '$2a$10$b1zk.UlxUmhefLmBtQ66DOhVPYpHQN6tYqtixNMQrAJGBDCWlYxey';
+    let isSyncing = false;
 
     function loadLocalDB() {
       try { return JSON.parse(localStorage.getItem(DB_KEY)) || null; } catch { return null; }
@@ -1182,6 +1183,9 @@
     }
 
     async function mutateDB(mutationFn, options = {}) {
+      if (isSyncing) return; // Proteção contra mutações simultâneas
+      isSyncing = true;
+
       const { quiet = false, fast = false } = options;
       if (!quiet) showSpinner();
       
@@ -1194,9 +1198,11 @@
 
         // 2. Atualização Instantânea Local (UI Otimista)
         localStorage.setItem(DB_KEY, JSON.stringify(db));
-        refreshAll(); // <--- O ecrã muda já aqui!
+        refreshAll(); 
+        
+        if (!quiet) hideSpinner();
 
-        // 3. Gravar na Cloud (Apenas 1 pedido em vez de 2)
+        // 3. Gravar na Cloud (Background)
         const pushPromise = fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
           method: 'PUT',
           headers: {
@@ -1206,14 +1212,19 @@
           body: JSON.stringify(db)
         });
 
-        // Se não for "fast", esperamos pelo OK da Cloud
-        if (!fast) await pushPromise;
+        if (fast) {
+          // No modo fast, libertamos o trinco assim que o pedido terminar (via finally)
+          pushPromise.finally(() => { isSyncing = false; });
+        } else {
+          // No modo safe (espera total), aguardamos pelo OK da Cloud
+          await pushPromise;
+          isSyncing = false;
+        }
 
       } catch (err) {
         console.error('Erro na DB:', err);
-      } finally {
-        if (!quiet) hideSpinner();
-      }
+        isSyncing = false;
+      } 
     }
 
     function initDB(serverData) {
@@ -1285,7 +1296,8 @@
 
       // 3. Silent Auto-Polling for Real-Time Collaboration
       setInterval(async () => {
-        if (document.getElementById('globalSpinner').classList.contains('active')) return; 
+        const spinner = document.getElementById('globalSpinner');
+        if ((spinner && spinner.classList.contains('active')) || isSyncing) return; 
         try {
           const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {headers: { 'X-Master-Key': API_KEY }});
           if (res.ok) {
@@ -2004,6 +2016,7 @@
 
           const newItems = [];
           let added = 0;
+          let updated = 0;
 
           const headers = (rows[0] || []).map(h => h ? h.toString().trim().toLowerCase() : '');
           const getIdx = (name) => headers.findIndex(h => h.includes(name));
@@ -2015,6 +2028,7 @@
           const notasIdx = getIdx('nota');
           const spillIdx = getIdx('spillover');
           const flagsIdx = getIdx('flag');
+          const doneIdx = headers.findIndex(h => h.includes('conclu') || h.includes('done') || h.includes('estado') || h.includes('status') || h === 'ok');
 
           if (idIdx === -1) { 
             alert('Coluna "US ID" não encontrada no ficheiro.'); 
@@ -2035,6 +2049,9 @@
             const notas = (notasIdx !== -1 && row[notasIdx]) ? row[notasIdx].toString().trim() : '';
             const spilloverText = (spillIdx !== -1 && row[spillIdx]) ? row[spillIdx].toString().trim().toLowerCase() : '';
             const flagsStr = (flagsIdx !== -1 && row[flagsIdx]) ? row[flagsIdx].toString().trim().toLowerCase() : '';
+            
+            const rawDone = (doneIdx !== -1 && row[doneIdx]) ? row[doneIdx].toString().trim().toLowerCase() : '';
+            const isDone = ['sim', 'true', '1', 'x', 'concluído', 'concluido', 'done', 'fechado', 'closed'].includes(rawDone);
 
             const item = {
               id: Date.now().toString() + Math.floor(Math.random() * 10000),
@@ -2042,8 +2059,8 @@
               usName: usName,
               dev: dev,
               pts: sp,
-              done: false,
-              doneDay: null,
+              done: isDone,
+              doneDay: isDone ? 1 : null, // Default ao dia 1 se vier do Excel como feito
               comment: notas,
               flags: []
             };
@@ -2069,16 +2086,40 @@
                 newItems.forEach(newItem => {
                   const normalizedNewName = String(newItem.name).trim().toLowerCase();
                   const existing = latestObj.items.find(i => String(i.name).trim().toLowerCase() === normalizedNewName);
-                  if (!existing) {
+                  if (existing) {
+                    // SE JÁ ESTIVER FEITO NO SITE, NÃO MEXEMOS (Proteção de Trabalho Concluido)
+                    if (existing.done) return;
+
+                    // Item está pendente: Atualiza os campos incluindo o possível novo estado de 'done' vindo do Excel
+                    existing.usName = newItem.usName || existing.usName;
+                    existing.dev = newItem.dev || existing.dev;
+                    existing.pts = newItem.pts || 0;
+                    existing.comment = newItem.comment || existing.comment;
+                    existing.forceSpillover = newItem.forceSpillover || false;
+                    
+                    // Sincroniza o Checkbox (Apenas para marcar como feito, já que ignoramos se já estiver feito acima)
+                    if (newItem.done) {
+                        existing.done = true;
+                        existing.doneDay = existing.doneDay || latestObj.currentDay || 1;
+                    }
+
+                    // Sincroniza as Flags (Merge sem duplicados)
+                    if (newItem.flags && newItem.flags.length > 0) {
+                        newItem.flags.forEach(f => {
+                            if (!existing.flags.includes(f)) existing.flags.push(f);
+                        });
+                    }
+                    updated++;
+                  } else {
                     // Novo US ID detetado: Adiciona!
+                    if (newItem.done) newItem.doneDay = latestObj.currentDay || 1;
                     latestObj.items.push(newItem);
                     added++;
                   }
-                  // Se já existir, ignora completamente (não adiciona nem atualiza dados)
                 });
               }
             });
-            setTimeout(() => alert(`Importação Segura: Foram criadas ${added} novas tarefas. As que já existiam foram ignoradas para evitar duplicados.`), 300);
+            setTimeout(() => alert(`Importação Concluída:\n- ${added} novas tarefas criadas.\n- ${updated} tarefas existentes foram atualizadas com novos dados do Excel.`), 300);
           } else {
             alert('Nenhum item válido encontrado para importar.');
           }
