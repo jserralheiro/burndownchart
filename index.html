@@ -900,6 +900,10 @@
 </head>
 
 <body>
+  <div class="global-spinner-overlay" id="globalSpinner">
+    <div class="spinner-circle"></div>
+    <div class="spinner-text">A Sincronizar...</div>
+  </div>
 
   <!-- ── Top Bar ── -->
   <div class="topbar">
@@ -1162,49 +1166,55 @@
     }
 
     function showSpinner() {
-      document.getElementById('globalSpinner').classList.add('active');
+      const el = document.getElementById('globalSpinner');
+      if (el) el.classList.add('active');
     }
     function hideSpinner() {
-      document.getElementById('globalSpinner').classList.remove('active');
+      const el = document.getElementById('globalSpinner');
+      if (el) el.classList.remove('active');
     }
 
     // Compatibilidade com código legado - Aplica db modificada localmente sobrescrevendo estado (apenas usado em ações pequenas onde race condition não afeta arrays)
     function saveDB(staleDb) {
       mutateDB(latestDB => {
-          // Em vez de fazer merge, usamos brute-force (pois o UI já estragou/alterou partes profundas invisíveis e é muito complexo fazer un-diff em JS vanilla sem IDs de tudo)
-          // Mas como o refactor do importDataExcel e addItem agora usam o callback diretamente, `saveDB` serve apenas para checkbox states e strings simples!
           Object.assign(latestDB, staleDb); 
-      });
+      }, { quiet: true, fast: true });
     }
 
-    async function mutateDB(mutationFn, skipSpinner = false) {
-      if (!skipSpinner) showSpinner();
+    async function mutateDB(mutationFn, options = {}) {
+      const { quiet = false, fast = false } = options;
+      if (!quiet) showSpinner();
+      
       try {
-        let targetDB = db; // Falback para a db em cache
-        // 1. Tentar ler fresh data da Cloud sempre antes de escrever (Read Before Write)
-        try {
-          const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-            headers: { 'X-Master-Key': API_KEY }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data && data.record && data.record.sprints) {
-              targetDB = data.record;
+        let targetDB = db;
+
+        // 1. Read-Before-Write (Vias lentas e seguras: Imports/Deletes)
+        if (!fast) {
+          try {
+            const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+              headers: { 'X-Master-Key': API_KEY }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data && data.record && data.record.sprints) {
+                targetDB = data.record;
+              }
             }
-          }
-        } catch(e) { console.warn("Sync failed, defaulting to local db"); }
+          } catch(e) { console.warn("Sync failed, defaulting to local db"); }
+        }
 
         targetDB.lastUpdated = Date.now();
         
-        // 2. Aplicar as alterações (Mutation)
+        // 2. Aplicar as alterações
         mutationFn(targetDB);
 
-        // 3. Gravar na RAM e LocalStorage
+        // 3. Atualização Instantânea Local (UI Otimista)
         db = targetDB;
         localStorage.setItem(DB_KEY, JSON.stringify(db));
+        refreshAll(); // Atualiza o ecrã imediatamente
 
-        // 4. Gravar de volta na Cloud (Lock)
-        await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+        // 4. Gravar na Cloud em Background
+        const pushPromise = fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -1213,11 +1223,13 @@
           body: JSON.stringify(db)
         });
 
+        // Se for "fast", não esperamos pela Cloud para devolver o controlo ao utilizador
+        if (!fast) await pushPromise;
+
       } catch (err) {
-        console.error('Operação de DB falhou:', err);
+        console.error('Erro na DB:', err);
       } finally {
-        if (!skipSpinner) hideSpinner();
-        refreshAll();
+        if (!quiet) hideSpinner();
       }
     }
 
@@ -1526,7 +1538,7 @@
       mutateDB(latestDB => {
         const s = latestDB.sprints.find(sp => sp.id === latestDB.activeSprint);
         if (s) s.items.push(newItem);
-      });
+      }, { quiet: true, fast: true });
     }
 
     function toggleItem(id) {
@@ -1565,8 +1577,7 @@
       mutateDB(latestDB => {
         const s = latestDB.sprints.find(sp => sp.id === latestDB.activeSprint);
         if (s) s.items = s.items.filter(i => i.id !== id);
-      });
-      // A UI será atualizada no refreshAll() dentro do finally do mutateDB.
+      }, { quiet: true, fast: true });
     }
 
     // ──────────────────────────────────────────────────────────────
