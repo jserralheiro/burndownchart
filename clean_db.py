@@ -1,6 +1,5 @@
 import urllib.request
 import json
-import urllib.parse
 api_key = '$2a$10$b1zk.UlxUmhefLmBtQ66DOhVPYpHQN6tYqtixNMQrAJGBDCWlYxey'
 
 for bin_id in ['69d3d50daaba882197cd3fbd', '69e69213aaba8821971d5604']:
@@ -13,12 +12,15 @@ for bin_id in ['69d3d50daaba882197cd3fbd', '69e69213aaba8821971d5604']:
         for s in data['sprints']:
             if 'items' in s:
                 unique_items = {}
-                for item in reversed(s['items']): # keep latest by looping reverse and not overwriting
-                    if item['name'] not in unique_items:
-                        unique_items[item['name']] = item
+                for item in reversed(s['items']):
+                    # Normalize string to catch sneaky duplicates
+                    normalized_name = str(item.get('name', '')).strip().lower().replace(' ', '')
+                    if normalized_name not in unique_items:
+                        unique_items[normalized_name] = item
                     else:
                         duplicate_count += 1
-                s['items'] = list(reversed(list(unique_items.values()))) # restore original order
+                        print(f"Removed duplicate: {repr(item.get('name'))} vs kept {repr(unique_items[normalized_name].get('name'))}")
+                s['items'] = list(reversed(list(unique_items.values())))
     
     if duplicate_count > 0:
         encoded = json.dumps(data, ensure_ascii=False).encode('utf-8')

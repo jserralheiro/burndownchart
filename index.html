@@ -2073,7 +2073,8 @@
               const latestObj = latestDB.sprints.find(sp => sp.id === latestDB.activeSprint);
               if (latestObj) {
                 newItems.forEach(newItem => {
-                  const existing = latestObj.items.find(i => i.name === newItem.name);
+                  const normalizedNewName = String(newItem.name).trim().toLowerCase();
+                  const existing = latestObj.items.find(i => String(i.name).trim().toLowerCase() === normalizedNewName);
                   if (existing) {
                     // Update instead of duplicate
                     existing.usName = newItem.usName || existing.usName;
