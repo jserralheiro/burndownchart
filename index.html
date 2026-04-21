@@ -860,6 +860,42 @@
       background: var(--surface3);
       color: var(--text);
     }
+    /* ── Global Spinner ── */
+    .global-spinner-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(14, 17, 23, 0.7);
+      backdrop-filter: blur(3px);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .global-spinner-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .spinner-circle {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 12px;
+    }
+    .spinner-text {
+      color: var(--text);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 
@@ -1125,18 +1161,64 @@
       try { return JSON.parse(localStorage.getItem(DB_KEY)) || null; } catch { return null; }
     }
 
-    function saveDB(db) {
-      // 1. Save locally instantly
-      localStorage.setItem(DB_KEY, JSON.stringify(db));
-      // 2. Sync to cloud in background
-      fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Master-Key': API_KEY
-        },
-        body: JSON.stringify(db)
-      }).catch(err => console.error('Cloud sync failed:', err));
+    function showSpinner() {
+      document.getElementById('globalSpinner').classList.add('active');
+    }
+    function hideSpinner() {
+      document.getElementById('globalSpinner').classList.remove('active');
+    }
+
+    // Compatibilidade com código legado - Aplica db modificada localmente sobrescrevendo estado (apenas usado em ações pequenas onde race condition não afeta arrays)
+    function saveDB(staleDb) {
+      mutateDB(latestDB => {
+          // Em vez de fazer merge, usamos brute-force (pois o UI já estragou/alterou partes profundas invisíveis e é muito complexo fazer un-diff em JS vanilla sem IDs de tudo)
+          // Mas como o refactor do importDataExcel e addItem agora usam o callback diretamente, `saveDB` serve apenas para checkbox states e strings simples!
+          Object.assign(latestDB, staleDb); 
+      });
+    }
+
+    async function mutateDB(mutationFn, skipSpinner = false) {
+      if (!skipSpinner) showSpinner();
+      try {
+        let targetDB = db; // Falback para a db em cache
+        // 1. Tentar ler fresh data da Cloud sempre antes de escrever (Read Before Write)
+        try {
+          const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+            headers: { 'X-Master-Key': API_KEY }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.record && data.record.sprints) {
+              targetDB = data.record;
+            }
+          }
+        } catch(e) { console.warn("Sync failed, defaulting to local db"); }
+
+        targetDB.lastUpdated = Date.now();
+        
+        // 2. Aplicar as alterações (Mutation)
+        mutationFn(targetDB);
+
+        // 3. Gravar na RAM e LocalStorage
+        db = targetDB;
+        localStorage.setItem(DB_KEY, JSON.stringify(db));
+
+        // 4. Gravar de volta na Cloud (Lock)
+        await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Master-Key': API_KEY
+          },
+          body: JSON.stringify(db)
+        });
+
+      } catch (err) {
+        console.error('Operação de DB falhou:', err);
+      } finally {
+        if (!skipSpinner) hideSpinner();
+        refreshAll();
+      }
     }
 
     function initDB(serverData) {
@@ -1205,6 +1287,24 @@
         const menu = document.getElementById('exportMenu');
         if (menu && menu.classList.contains('open')) menu.classList.remove('open');
       });
+
+      // 3. Silent Auto-Polling for Real-Time Collaboration
+      setInterval(async () => {
+        if (document.getElementById('globalSpinner').classList.contains('active')) return; 
+        try {
+          const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {headers: { 'X-Master-Key': API_KEY }});
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.record && data.record.lastUpdated) {
+              if (!db.lastUpdated || data.record.lastUpdated > db.lastUpdated) {
+                db = data.record;
+                localStorage.setItem(DB_KEY, JSON.stringify(db));
+                refreshAll();
+              }
+            }
+          }
+        } catch(e) {}
+      }, 15000);
     });
 
     function refreshAll() {
@@ -1407,18 +1507,15 @@
     }
 
     function addItem() {
-      const s = getActive(db);
       const name = document.getElementById('itemID').value.trim(); // used as US ID
       const usName = document.getElementById('itemUsName').value.trim();
       const dev = document.getElementById('itemDev').value.trim();
-      
       const ptsVal = document.getElementById('itemPts').value.trim();
 
       if (!name) { document.getElementById('itemID').focus(); return; }
       
       const pts = Math.max(0, parseInt(ptsVal) || 0);
-
-      s.items.push({ id: Date.now().toString(), name, usName, dev, pts, done: false, doneDay: null });
+      const newItem = { id: Date.now().toString(), name, usName, dev, pts, done: false, doneDay: null };
 
       document.getElementById('itemID').value = '';
       document.getElementById('itemUsName').value = '';
@@ -1426,11 +1523,10 @@
       document.getElementById('itemPts').value = '';
       document.getElementById('itemID').focus();
 
-      saveDB(db);
-      updateDevFilterDropdown();
-      renderItems();
-      renderChart();
-      updateStats();
+      mutateDB(latestDB => {
+        const s = latestDB.sprints.find(sp => sp.id === latestDB.activeSprint);
+        if (s) s.items.push(newItem);
+      });
     }
 
     function toggleItem(id) {
@@ -1466,13 +1562,11 @@
 
 
     function deleteItem(id) {
-      const s = getActive(db);
-      s.items = s.items.filter(i => i.id !== id);
-      saveDB(db);
-      updateDevFilterDropdown();
-      renderItems();
-      renderChart();
-      updateStats();
+      mutateDB(latestDB => {
+        const s = latestDB.sprints.find(sp => sp.id === latestDB.activeSprint);
+        if (s) s.items = s.items.filter(i => i.id !== id);
+      });
+      // A UI será atualizada no refreshAll() dentro do finally do mutateDB.
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -1808,11 +1902,12 @@
       const days = Math.max(1, parseInt(document.getElementById('newSprintDays').value) || 10);
       const cur = Math.min(days, Math.max(1, parseInt(document.getElementById('newCurrentDay').value) || 1));
       const s = newSprintObj(name, days, cur);
-      db.sprints.push(s);
-      db.activeSprint = s.id;
-      saveDB(db);
+      
       closeModal();
-      refreshAll();
+      mutateDB(latestDB => {
+        latestDB.sprints.push(s);
+        latestDB.activeSprint = s.id;
+      });
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -1821,10 +1916,13 @@
     function deleteSprint(id) {
       if (db.sprints.length === 1) { alert('Não podes eliminar o único sprint existente.'); return; }
       if (!confirm('Tens a certeza que queres eliminar este sprint e todos os seus itens?')) return;
-      db.sprints = db.sprints.filter(s => s.id !== id);
-      if (db.activeSprint === id) db.activeSprint = db.sprints[db.sprints.length - 1].id;
-      saveDB(db);
-      refreshAll();
+      
+      mutateDB(latestDB => {
+        latestDB.sprints = latestDB.sprints.filter(sp => sp.id !== id);
+        if (latestDB.activeSprint === id) {
+          latestDB.activeSprint = latestDB.sprints[latestDB.sprints.length - 1].id;
+        }
+      });
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -1910,7 +2008,7 @@
             return; 
           }
 
-          const s = getActive(db);
+          const newItems = [];
           let added = 0;
 
           const headers = (rows[0] || []).map(h => h ? h.toString().trim().toLowerCase() : '');
@@ -1967,14 +2065,32 @@
                 }
               });
             }
-            s.items.push(item);
-            added++;
+            newItems.push(item);
           }
 
-          if (added > 0) {
-            saveDB(db);
-            refreshAll();
-            alert(`Foram importados \${added} itens com sucesso!`);
+          if (newItems.length > 0) {
+            mutateDB(latestDB => {
+              const latestObj = latestDB.sprints.find(sp => sp.id === latestDB.activeSprint);
+              if (latestObj) {
+                newItems.forEach(newItem => {
+                  const existing = latestObj.items.find(i => i.name === newItem.name);
+                  if (existing) {
+                    // Update instead of duplicate
+                    existing.usName = newItem.usName || existing.usName;
+                    existing.dev = newItem.dev || existing.dev;
+                    existing.pts = newItem.pts || existing.pts;
+                    if (newItem.forceSpillover) existing.forceSpillover = true;
+                    newItem.flags.forEach(f => {
+                      if (!existing.flags.includes(f)) existing.flags.push(f);
+                    });
+                  } else {
+                    latestObj.items.push(newItem);
+                    added++;
+                  }
+                });
+              }
+            });
+            setTimeout(() => alert(`Importação concluída: ${added} itens novos, os restantes foram atualizados.`), 500);
           } else {
             alert('Nenhum item válido encontrado para importar.');
           }
