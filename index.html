@@ -1186,34 +1186,17 @@
       if (!quiet) showSpinner();
       
       try {
-        let targetDB = db;
-
-        // 1. Read-Before-Write (Vias lentas e seguras: Imports/Deletes)
-        if (!fast) {
-          try {
-            const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
-              headers: { 'X-Master-Key': API_KEY }
-            });
-            if (res.ok) {
-              const data = await res.json();
-              if (data && data.record && data.record.sprints) {
-                targetDB = data.record;
-              }
-            }
-          } catch(e) { console.warn("Sync failed, defaulting to local db"); }
-        }
-
-        targetDB.lastUpdated = Date.now();
+        // Marcamos a hora da alteração
+        db.lastUpdated = Date.now();
         
-        // 2. Aplicar as alterações
-        mutationFn(targetDB);
+        // 1. Aplicamos a mudança na memória local
+        mutationFn(db);
 
-        // 3. Atualização Instantânea Local (UI Otimista)
-        db = targetDB;
+        // 2. Atualização Instantânea Local (UI Otimista)
         localStorage.setItem(DB_KEY, JSON.stringify(db));
-        refreshAll(); // Atualiza o ecrã imediatamente
+        refreshAll(); // <--- O ecrã muda já aqui!
 
-        // 4. Gravar na Cloud em Background
+        // 3. Gravar na Cloud (Apenas 1 pedido em vez de 2)
         const pushPromise = fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
           method: 'PUT',
           headers: {
@@ -1223,7 +1206,7 @@
           body: JSON.stringify(db)
         });
 
-        // Se for "fast", não esperamos pela Cloud para devolver o controlo ao utilizador
+        // Se não for "fast", esperamos pelo OK da Cloud
         if (!fast) await pushPromise;
 
       } catch (err) {
@@ -1316,7 +1299,7 @@
             }
           }
         } catch(e) {}
-      }, 15000);
+      }, 7000);
     });
 
     function refreshAll() {
