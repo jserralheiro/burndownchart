@@ -1989,12 +1989,12 @@
       a.click();
     }
 
-    function importDataExcel(event) {
+    async function importDataExcel(event) {
       const file = event.target.files[0];
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = function(e) {
+      reader.onload = async function(e) {
         try {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
@@ -2069,29 +2069,22 @@
           }
 
           if (newItems.length > 0) {
-            mutateDB(latestDB => {
+            await mutateDB(latestDB => {
               const latestObj = latestDB.sprints.find(sp => sp.id === latestDB.activeSprint);
               if (latestObj) {
                 newItems.forEach(newItem => {
                   const normalizedNewName = String(newItem.name).trim().toLowerCase();
                   const existing = latestObj.items.find(i => String(i.name).trim().toLowerCase() === normalizedNewName);
-                  if (existing) {
-                    // Update instead of duplicate
-                    existing.usName = newItem.usName || existing.usName;
-                    existing.dev = newItem.dev || existing.dev;
-                    existing.pts = newItem.pts || existing.pts;
-                    if (newItem.forceSpillover) existing.forceSpillover = true;
-                    newItem.flags.forEach(f => {
-                      if (!existing.flags.includes(f)) existing.flags.push(f);
-                    });
-                  } else {
+                  if (!existing) {
+                    // Novo US ID detetado: Adiciona!
                     latestObj.items.push(newItem);
                     added++;
                   }
+                  // Se já existir, ignora completamente (não adiciona nem atualiza dados)
                 });
               }
             });
-            setTimeout(() => alert(`Importação concluída: ${added} itens novos, os restantes foram atualizados.`), 500);
+            setTimeout(() => alert(`Importação Segura: Foram criadas ${added} novas tarefas. As que já existiam foram ignoradas para evitar duplicados.`), 300);
           } else {
             alert('Nenhum item válido encontrado para importar.');
           }
