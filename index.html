@@ -1160,7 +1160,9 @@
     const DB_KEY = IS_DEV ? 'burndown_db_dev' : 'burndown_db';
     const BIN_ID = IS_DEV ? '69e69213aaba8821971d5604' : '69d3d50daaba882197cd3fbd';
     const API_KEY = '$2a$10$b1zk.UlxUmhefLmBtQ66DOhVPYpHQN6tYqtixNMQrAJGBDCWlYxey';
-    let isSyncing = false;
+    let cloudPushInFlight = false;
+    let cloudPushPending = false;
+    let bootComplete = false;
 
     function loadLocalDB() {
       try { return JSON.parse(localStorage.getItem(DB_KEY)) || null; } catch { return null; }
@@ -1175,35 +1177,37 @@
       if (el) el.classList.remove('active');
     }
 
-    // Compatibilidade com código legado - Aplica db modificada localmente sobrescrevendo estado (apenas usado em ações pequenas onde race condition não afeta arrays)
-    function saveDB(staleDb) {
-      mutateDB(latestDB => {
-          Object.assign(latestDB, staleDb); 
-      }, { quiet: true, fast: true });
+    // saveDB: Grava alterações feitas diretamente no objeto db (checkboxes, edições simples)
+    function saveDB() {
+      db.lastUpdated = Date.now();
+      localStorage.setItem(DB_KEY, JSON.stringify(db));
+      refreshAll();
+      scheduleCloudPush();
     }
 
-    async function mutateDB(mutationFn, options = {}) {
-      if (isSyncing) return; // Proteção contra mutações simultâneas
-      isSyncing = true;
-
-      const { quiet = false, fast = false } = options;
+    // mutateDB: Aplica uma função de mutação ao db e sincroniza (imports, add/delete)
+    function mutateDB(mutationFn, options = {}) {
+      const { quiet = false } = options;
       if (!quiet) showSpinner();
-      
+
+      db.lastUpdated = Date.now();
+      mutationFn(db);
+      localStorage.setItem(DB_KEY, JSON.stringify(db));
+      refreshAll();
+
+      if (!quiet) hideSpinner();
+      scheduleCloudPush();
+    }
+
+    // scheduleCloudPush: Fila inteligente de gravação na Cloud (nunca bloqueia o utilizador)
+    async function scheduleCloudPush() {
+      if (cloudPushInFlight) {
+        cloudPushPending = true; // Marca que há dados mais recentes para enviar
+        return;
+      }
+      cloudPushInFlight = true;
       try {
-        // Marcamos a hora da alteração
-        db.lastUpdated = Date.now();
-        
-        // 1. Aplicamos a mudança na memória local
-        mutationFn(db);
-
-        // 2. Atualização Instantânea Local (UI Otimista)
-        localStorage.setItem(DB_KEY, JSON.stringify(db));
-        refreshAll(); 
-        
-        if (!quiet) hideSpinner();
-
-        // 3. Gravar na Cloud (Background)
-        const pushPromise = fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+        await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -1211,20 +1215,15 @@
           },
           body: JSON.stringify(db)
         });
-
-        if (fast) {
-          // No modo fast, libertamos o trinco assim que o pedido terminar (via finally)
-          pushPromise.finally(() => { isSyncing = false; });
-        } else {
-          // No modo safe (espera total), aguardamos pelo OK da Cloud
-          await pushPromise;
-          isSyncing = false;
-        }
-
       } catch (err) {
-        console.error('Erro na DB:', err);
-        isSyncing = false;
-      } 
+        console.error('Erro na Cloud:', err);
+      } finally {
+        cloudPushInFlight = false;
+        if (cloudPushPending) {
+          cloudPushPending = false;
+          scheduleCloudPush(); // Reenvia com os dados mais recentes
+        }
+      }
     }
 
     function initDB(serverData) {
@@ -1241,7 +1240,7 @@
           // Server returned empty — safe to create default and save
           const first = newSprintObj('Sprint 1', 10, 1);
           db = { activeSprint: first.id, sprints: [first] };
-          saveDB(db);
+          localStorage.setItem(DB_KEY, JSON.stringify(db));
         }
       } else if (serverData) {
         // Sync server data to localStorage so offline still works
@@ -1286,7 +1285,8 @@
             refreshAll();
           }
         })
-        .catch(() => {}); // local data already showing, ignore errors
+        .catch(() => {})
+        .finally(() => { bootComplete = true; }); // Boot concluído, polling pode começar
 
       // Allow clicking outside to close dropdowns
       document.addEventListener('click', () => {
@@ -1297,7 +1297,7 @@
       // 3. Silent Auto-Polling for Real-Time Collaboration
       setInterval(async () => {
         const spinner = document.getElementById('globalSpinner');
-        if ((spinner && spinner.classList.contains('active')) || isSyncing) return; 
+        if ((spinner && spinner.classList.contains('active')) || cloudPushInFlight || cloudPushPending || !bootComplete) return; 
         try {
           const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {headers: { 'X-Master-Key': API_KEY }});
           if (res.ok) {
@@ -1343,8 +1343,7 @@
 
     function switchSprint(id) {
       db.activeSprint = id;
-      saveDB(db);
-      refreshAll();
+      saveDB();
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -1414,11 +1413,7 @@
       s.currentDay = Math.min(s.days, Math.max(1, parseInt(document.getElementById('currentDay').value) || 1));
       document.getElementById('currentDay').value = s.currentDay;
       document.getElementById('sprintLabel').textContent = s.name;
-      saveDB(db);
-      populateDropdown();
-      renderItems();
-      renderChart();
-      updateStats();
+      saveDB();
       pulse('applyBtn');
     }
 
@@ -1506,20 +1501,27 @@
       item.pts = Math.max(0, parseInt(ptsVal) || 0);
 
       editingItemId = null;
-      saveDB(db);
-      updateDevFilterDropdown();
-      renderItems();
-      renderChart();
-      updateStats();
+      saveDB();
     }
 
     function addItem() {
-      const name = document.getElementById('itemID').value.trim(); // used as US ID
+      const name = document.getElementById('itemID').value.trim();
       const usName = document.getElementById('itemUsName').value.trim();
       const dev = document.getElementById('itemDev').value.trim();
       const ptsVal = document.getElementById('itemPts').value.trim();
 
       if (!name) { document.getElementById('itemID').focus(); return; }
+
+      // Verificar se o US ID já existe no Sprint (prevenir duplicados)
+      const s = getActive(db);
+      if (s) {
+        const normalizedName = name.toLowerCase();
+        const exists = s.items.some(i => String(i.name).trim().toLowerCase() === normalizedName);
+        if (exists) {
+          alert(`A tarefa "${name}" já existe neste Sprint!`);
+          return;
+        }
+      }
       
       const pts = Math.max(0, parseInt(ptsVal) || 0);
       const newItem = { id: Date.now().toString(), name, usName, dev, pts, done: false, doneDay: null };
@@ -1533,7 +1535,7 @@
       mutateDB(latestDB => {
         const s = latestDB.sprints.find(sp => sp.id === latestDB.activeSprint);
         if (s) s.items.push(newItem);
-      }, { quiet: true, fast: true });
+      }, { quiet: true });
     }
 
     function toggleItem(id) {
@@ -1542,10 +1544,7 @@
       if (!item) return;
       item.done = !item.done;
       item.doneDay = item.done ? s.currentDay : null;
-      saveDB(db);
-      renderItems();
-      renderChart();
-      updateStats();
+      saveDB();
     }
 
     function toggleAllItems() {
@@ -1560,10 +1559,7 @@
         item.doneDay = item.done ? s.currentDay : null;
       });
       
-      saveDB(db);
-      renderItems();
-      renderChart();
-      updateStats();
+      saveDB();
     }
 
 
@@ -1572,7 +1568,7 @@
       mutateDB(latestDB => {
         const s = latestDB.sprints.find(sp => sp.id === latestDB.activeSprint);
         if (s) s.items = s.items.filter(i => i.id !== id);
-      }, { quiet: true, fast: true });
+      }, { quiet: true });
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -1654,8 +1650,7 @@
           .filter(f => document.getElementById(f.elId).checked)
           .map(f => f.key);
 
-        saveDB(db);
-        renderItems();
+        saveDB();
       }
       closeCommentModal();
     }
@@ -1944,9 +1939,8 @@
     }
     
     function exportDataJson() {
-      const data = loadLocalDB();
-      if (!data) return alert('Não há dados para exportar.');
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      if (!db || !db.sprints) return alert('Não há dados para exportar.');
+      const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'data.json';
@@ -1954,8 +1948,7 @@
     }
 
     function exportDataExcel() {
-      const dbData = loadLocalDB();
-      const sprint = getActive(dbData);
+      const sprint = getActive(db);
       if (!sprint || sprint.items.length === 0) return alert('Não há tarefas no sprint atual para exportar.');
       
       // UTF-8 BOM so Excel automatically recognizes characters like á, ç, etc.
@@ -2080,7 +2073,7 @@
           }
 
           if (newItems.length > 0) {
-            await mutateDB(latestDB => {
+            mutateDB(latestDB => {
               const latestObj = latestDB.sprints.find(sp => sp.id === latestDB.activeSprint);
               if (latestObj) {
                 newItems.forEach(newItem => {
