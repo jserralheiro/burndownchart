@@ -281,7 +281,8 @@
       resize: vertical;
     }
 
-    input:focus, textarea:focus {
+    input:focus,
+    textarea:focus {
       border-color: var(--accent);
     }
 
@@ -329,9 +330,10 @@
       color: var(--text);
       white-space: nowrap;
       z-index: 100;
-      box-shadow: 0 4px 16px rgba(0,0,0,.4);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, .4);
       line-height: 1.7;
     }
+
     .flag-tooltip::after {
       content: '';
       position: absolute;
@@ -341,10 +343,12 @@
       border: 5px solid transparent;
       border-top-color: var(--border);
     }
+
     .flag-dot-wrap:hover .flag-tooltip,
     .spillover-wrap:hover .flag-tooltip {
       display: block;
     }
+
     .spillover-wrap {
       position: relative;
       display: inline-flex;
@@ -362,6 +366,7 @@
       gap: 8px 16px;
       margin-bottom: 14px;
     }
+
     .flag-checks label {
       display: flex;
       align-items: center;
@@ -371,6 +376,7 @@
       cursor: pointer;
       user-select: none;
     }
+
     .flag-checks input[type="checkbox"] {
       accent-color: var(--accent);
       width: 15px;
@@ -470,7 +476,7 @@
       border-color: #00d4aa33;
       background: #00d4aa07;
     }
-    
+
     .item-name {
       display: flex;
       align-items: center;
@@ -610,6 +616,7 @@
       position: relative;
       display: inline-block;
     }
+
     .dropdown-menu {
       display: none;
       position: absolute;
@@ -619,15 +626,17 @@
       background: var(--surface2);
       border: 1px solid var(--border);
       border-radius: 8px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
       z-index: 200;
       min-width: 170px;
       overflow: hidden;
       flex-direction: column;
     }
+
     .dropdown-menu.open {
       display: flex;
     }
+
     .dropdown-item {
       background: transparent;
       border: none;
@@ -642,9 +651,11 @@
       align-items: center;
       gap: 8px;
     }
+
     .dropdown-item:hover {
       background: var(--surface3);
     }
+
     .dropdown-item:not(:last-child) {
       border-bottom: 1px solid var(--border);
     }
@@ -860,6 +871,7 @@
       background: var(--surface3);
       color: var(--text);
     }
+
     /* ── Global Spinner ── */
     .global-spinner-overlay {
       position: fixed;
@@ -875,10 +887,12 @@
       pointer-events: none;
       transition: opacity 0.2s ease;
     }
+
     .global-spinner-overlay.active {
       opacity: 1;
       pointer-events: auto;
     }
+
     .spinner-circle {
       width: 40px;
       height: 40px;
@@ -888,13 +902,17 @@
       animation: spin 1s linear infinite;
       margin-bottom: 12px;
     }
+
     .spinner-text {
       color: var(--text);
       font-weight: 600;
       font-size: 0.9rem;
     }
+
     @keyframes spin {
-      to { transform: rotate(360deg); }
+      to {
+        transform: rotate(360deg);
+      }
     }
   </style>
 </head>
@@ -932,25 +950,40 @@
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
         Novo Sprint
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importExcelInput').click()">
-        📂 Importar
-      </button>
-      <input type="file" id="importExcelInput" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" style="display:none" onchange="importDataExcel(event)" />
-      <div class="dropdown-wrapper">
-        <button class="btn btn-ghost btn-sm" onclick="toggleExportMenu(event)">
-          📥 Exportar
+        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importExcelInput').click()">
+          📂 Importar
         </button>
-        <div class="dropdown-menu" id="exportMenu">
-          <button class="dropdown-item" onclick="exportDataJson()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="16 16 12 20 8 16"></polyline><line x1="12" y1="12" x2="12" y2="20"></line><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path><polyline points="16 16 12 20 8 16"></polyline></svg>
-            Exportar para JSON
+        <input type="file" id="importExcelInput"
+          accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+          style="display:none" onchange="importDataExcel(event)" />
+        <div class="dropdown-wrapper">
+          <button class="btn btn-ghost btn-sm" onclick="toggleExportMenu(event)">
+            📥 Exportar
           </button>
-          <button class="dropdown-item" onclick="exportDataExcel()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            Exportar para Excel
-          </button>
+          <div class="dropdown-menu" id="exportMenu">
+            <button class="dropdown-item" onclick="exportDataJson()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round">
+                <polyline points="16 16 12 20 8 16"></polyline>
+                <line x1="12" y1="12" x2="12" y2="20"></line>
+                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+                <polyline points="16 16 12 20 8 16"></polyline>
+              </svg>
+              Exportar para JSON
+            </button>
+            <button class="dropdown-item" onclick="exportDataExcel()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="8" y1="13" x2="16" y2="13"></line>
+                <line x1="8" y1="17" x2="16" y2="17"></line>
+                <polyline points="10 9 9 9 8 9"></polyline>
+              </svg>
+              Exportar para Excel
+            </button>
+          </div>
         </div>
-      </div>
     </div>
   </div>
 
@@ -1027,7 +1060,10 @@
           <!-- Table header -->
           <div class="items-table-header">
             <div class="checkbox-wrap" id="selectAllWrap" onclick="toggleAllItems()">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5"
+                stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
             </div>
             <span>US ID</span>
             <span>US Name</span>
@@ -1064,11 +1100,11 @@
           <div class="stat-value purple" id="statTotal">0</div>
         </div>
         <div class="stat">
-          <div class="stat-label">Concluídos</div>
+          <div class="stat-label">SP Concluídos</div>
           <div class="stat-value green" id="statDone">0</div>
         </div>
         <div class="stat">
-          <div class="stat-label">Restantes</div>
+          <div class="stat-label">SP Restantes</div>
           <div class="stat-value pink" id="statLeft">0</div>
         </div>
       </div>
@@ -1076,7 +1112,8 @@
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <div class="card-title" style="margin-bottom: 0;">📉 Burndown — <span id="sprintLabel">—</span></div>
-          <select id="devFilter" class="sprint-select" onchange="filterByDev(this.value)" style="min-width: 140px; padding: 6px 10px; font-size: .75rem; border-radius: 6px;">
+          <select id="devFilter" class="sprint-select" onchange="filterByDev(this.value)"
+            style="min-width: 140px; padding: 6px 10px; font-size: .75rem; border-radius: 6px;">
             <option value="all">Todos os Devs</option>
           </select>
         </div>
@@ -1137,7 +1174,8 @@
       </div>
       <div class="form-row">
         <label for="itemComment">Notas Adicionais</label>
-        <textarea id="itemComment" rows="5" placeholder="Escreve aqui as anotações, detalhes técnicos ou links úteis..."></textarea>
+        <textarea id="itemComment" rows="5"
+          placeholder="Escreve aqui as anotações, detalhes técnicos ou links úteis..."></textarea>
       </div>
       <div class="modal-actions">
         <button class="btn btn-ghost" onclick="closeCommentModal()">Cancelar</button>
@@ -1155,7 +1193,7 @@
     // ──────────────────────────────────────────────────────────────
     // Deteta se o utilizador está a desenvolver localmente via localhost ou file:// (Port 8000 é o proxy de "camuflagem" para Prod)
     const IS_DEV = (window.location.protocol === 'file:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && window.location.port !== '8000';
-    
+
     // Separa a base de dados Local da Oficial de Produção
     const DB_KEY = IS_DEV ? 'burndown_db_dev' : 'burndown_db';
     const BIN_ID = IS_DEV ? '69e69213aaba8821971d5604' : '69d3d50daaba882197cd3fbd';
@@ -1285,7 +1323,7 @@
             refreshAll();
           }
         })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => { bootComplete = true; }); // Boot concluído, polling pode começar
 
       // Allow clicking outside to close dropdowns
@@ -1297,9 +1335,9 @@
       // 3. Silent Auto-Polling for Real-Time Collaboration
       setInterval(async () => {
         const spinner = document.getElementById('globalSpinner');
-        if ((spinner && spinner.classList.contains('active')) || cloudPushInFlight || cloudPushPending || !bootComplete) return; 
+        if ((spinner && spinner.classList.contains('active')) || cloudPushInFlight || cloudPushPending || !bootComplete) return;
         try {
-          const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {headers: { 'X-Master-Key': API_KEY }});
+          const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
           if (res.ok) {
             const data = await res.json();
             if (data && data.record && data.record.lastUpdated) {
@@ -1310,7 +1348,7 @@
               }
             }
           }
-        } catch(e) {}
+        } catch (e) { }
       }, 7000);
     });
 
@@ -1360,13 +1398,13 @@
         .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
         .forEach(s => {
           const total = s.items.reduce((a, i) => a + i.pts, 0);
-        const done = s.items.filter(i => i.done).reduce((a, i) => a + i.pts, 0);
-        const pct = total ? Math.round(done / total * 100) : 0;
-        const date = new Date(s.createdAt).toLocaleDateString('pt-PT');
+          const done = s.items.filter(i => i.done).reduce((a, i) => a + i.pts, 0);
+          const pct = total ? Math.round(done / total * 100) : 0;
+          const date = new Date(s.createdAt).toLocaleDateString('pt-PT');
 
-        const div = document.createElement('div');
-        div.className = 'sprint-item' + (s.id === db.activeSprint ? ' active' : '');
-        div.innerHTML = `
+          const div = document.createElement('div');
+          div.className = 'sprint-item' + (s.id === db.activeSprint ? ' active' : '');
+          div.innerHTML = `
           <div class="sprint-item-info" onclick="switchSprint('${s.id}'); showTab('sprint');" style="cursor:pointer">
             <div class="sprint-item-name">${escHtml(s.name)}</div>
             <div class="sprint-item-meta">${s.days} dias · ${total} SP · criado ${date}</div>
@@ -1378,8 +1416,8 @@
             </button>
           </div>
         `;
-        list.appendChild(div);
-      });
+          list.appendChild(div);
+        });
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -1425,12 +1463,12 @@
     function getFilteredItems() {
       const s = getActive(db);
       if (!s) return [];
-      
+
       let items = s.items;
       if (selectedDevFilter !== 'all') {
         items = s.items.filter(i => i.dev && i.dev.trim() === selectedDevFilter);
       }
-      
+
       // Ordenar alfabeticamente/numericamente pelo US ID (name) de forma crescente
       return items.slice().sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
     }
@@ -1439,7 +1477,7 @@
       const s = getActive(db);
       const select = document.getElementById('devFilter');
       const currentVal = selectedDevFilter;
-      
+
       const devs = new Set();
       if (s) {
         s.items.forEach(i => {
@@ -1447,12 +1485,12 @@
           if (d) devs.add(d);
         });
       }
-      
+
       let html = `<option value="all">Todos os Devs</option>`;
       Array.from(devs).sort().forEach(d => {
         html += `<option value="${escHtml(d)}">${escHtml(d)}</option>`;
       });
-      
+
       select.innerHTML = html;
       if (devs.has(currentVal)) {
         select.value = currentVal;
@@ -1496,7 +1534,7 @@
       item.name = newName;
       item.usName = document.getElementById(`edit-us-${id}`).value.trim();
       item.dev = document.getElementById(`edit-dev-${id}`).value.trim();
-      
+
       const ptsVal = document.getElementById(`edit-pts-${id}`).value.trim();
       item.pts = Math.max(0, parseInt(ptsVal) || 0);
 
@@ -1522,7 +1560,7 @@
           return;
         }
       }
-      
+
       const pts = Math.max(0, parseInt(ptsVal) || 0);
       const newItem = { id: Date.now().toString(), name, usName, dev, pts, done: false, doneDay: null };
 
@@ -1552,13 +1590,13 @@
       if (!s) return;
       const filtered = getFilteredItems();
       if (filtered.length === 0) return;
-      
+
       const allDone = filtered.every(i => i.done);
       filtered.forEach(item => {
         item.done = !allDone;
         item.doneDay = item.done ? s.currentDay : null;
       });
-      
+
       saveDB();
     }
 
@@ -1577,10 +1615,10 @@
     let commentItemId = null;
 
     const FLAG_DEFS = [
-      { key: 'sp_changed',  elId: 'flagSpChanged',  label: '⚡ Alteração de SP' },
-      { key: 'reassigned',  elId: 'flagReassigned',  label: '👤 Mudança de Assignee' },
-      { key: 'help',        elId: 'flagHelp',        label: '🤝 Teve ajuda' },
-      { key: 'scope_creep', elId: 'flagScopeCreep',  label: '⚠️ Adicionado a meio' }
+      { key: 'sp_changed', elId: 'flagSpChanged', label: '⚡ Alteração de SP' },
+      { key: 'reassigned', elId: 'flagReassigned', label: '👤 Mudança de Assignee' },
+      { key: 'help', elId: 'flagHelp', label: '🤝 Teve ajuda' },
+      { key: 'scope_creep', elId: 'flagScopeCreep', label: '⚠️ Adicionado a meio' }
     ];
 
     function getFlagDotHtml(item) {
@@ -1598,9 +1636,9 @@
       if (!db || !db.sprints) return false;
       const currentSprint = getActive(db);
       if (!currentSprint) return false;
-      
+
       const currentIdNum = Number(currentSprint.id);
-      
+
       for (const sprint of db.sprints) {
         const sprintIdNum = Number(sprint.id);
         if (sprintIdNum < currentIdNum) {
@@ -1671,14 +1709,14 @@
       const filtered = getFilteredItems();
       const selectAllWrap = document.getElementById('selectAllWrap');
 
-      if (!s || filtered.length === 0) { 
-        empty.style.display = 'block'; 
-        if(selectAllWrap) selectAllWrap.classList.remove('checked');
-        return; 
+      if (!s || filtered.length === 0) {
+        empty.style.display = 'block';
+        if (selectAllWrap) selectAllWrap.classList.remove('checked');
+        return;
       }
       empty.style.display = 'none';
 
-      if(selectAllWrap) {
+      if (selectAllWrap) {
         if (filtered.every(i => i.done)) selectAllWrap.classList.add('checked');
         else selectAllWrap.classList.remove('checked');
       }
@@ -1903,7 +1941,7 @@
       const days = Math.max(1, parseInt(document.getElementById('newSprintDays').value) || 10);
       const cur = Math.min(days, Math.max(1, parseInt(document.getElementById('newCurrentDay').value) || 1));
       const s = newSprintObj(name, days, cur);
-      
+
       closeModal();
       mutateDB(latestDB => {
         latestDB.sprints.push(s);
@@ -1917,7 +1955,7 @@
     function deleteSprint(id) {
       if (db.sprints.length === 1) { alert('Não podes eliminar o único sprint existente.'); return; }
       if (!confirm('Tens a certeza que queres eliminar este sprint e todos os seus itens?')) return;
-      
+
       mutateDB(latestDB => {
         latestDB.sprints = latestDB.sprints.filter(sp => sp.id !== id);
         if (latestDB.activeSprint === id) {
@@ -1937,7 +1975,7 @@
       const menu = document.getElementById('exportMenu');
       menu.classList.toggle('open');
     }
-    
+
     function exportDataJson() {
       if (!db || !db.sprints) return alert('Não há dados para exportar.');
       const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
@@ -1950,24 +1988,24 @@
     function exportDataExcel() {
       const sprint = getActive(db);
       if (!sprint || sprint.items.length === 0) return alert('Não há tarefas no sprint atual para exportar.');
-      
+
       // UTF-8 BOM so Excel automatically recognizes characters like á, ç, etc.
       let csv = '\uFEFF';
       // ';' delimiter for Excel PT
       csv += 'US ID;US Name;Dev;SP;Status;Dia;Flags;Spillover;Notas\n';
-      
+
       sprint.items.forEach(item => {
         const estado = item.done ? 'Concluído' : 'Aberto';
         const dia = item.doneDay ? item.doneDay : '';
         const flags = (item.flags || []).join(', ');
         const spillover = isSpillover(item) ? 'Sim' : 'Não';
-        
+
         // Escape fields to avoid delimiter collisions
         const escapeField = (f) => {
           if (!f) return '""';
           return `"${String(f).replace(/"/g, '""')}"`;
         };
-        
+
         csv += [
           escapeField(item.name),
           escapeField(item.usName),
@@ -1993,7 +2031,7 @@
       if (!file) return;
 
       const reader = new FileReader();
-      reader.onload = async function(e) {
+      reader.onload = async function (e) {
         try {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
@@ -2001,10 +2039,10 @@
           const worksheet = workbook.Sheets[firstSheetName];
           const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-          if (!rows || rows.length < 2) { 
-            alert('O ficheiro não contém dados válidos.'); 
-            event.target.value = ''; 
-            return; 
+          if (!rows || rows.length < 2) {
+            alert('O ficheiro não contém dados válidos.');
+            event.target.value = '';
+            return;
           }
 
           const newItems = [];
@@ -2023,10 +2061,10 @@
           const flagsIdx = getIdx('flag');
           const doneIdx = headers.findIndex(h => h.includes('conclu') || h.includes('done') || h.includes('estado') || h.includes('status') || h === 'ok');
 
-          if (idIdx === -1) { 
-            alert('Coluna "US ID" não encontrada no ficheiro.'); 
-            event.target.value = ''; 
-            return; 
+          if (idIdx === -1) {
+            alert('Coluna "US ID" não encontrada no ficheiro.');
+            event.target.value = '';
+            return;
           }
 
           for (let i = 1; i < rows.length; i++) {
@@ -2042,7 +2080,7 @@
             const notas = (notasIdx !== -1 && row[notasIdx]) ? row[notasIdx].toString().trim() : '';
             const spilloverText = (spillIdx !== -1 && row[spillIdx]) ? row[spillIdx].toString().trim().toLowerCase() : '';
             const flagsStr = (flagsIdx !== -1 && row[flagsIdx]) ? row[flagsIdx].toString().trim().toLowerCase() : '';
-            
+
             const rawDone = (doneIdx !== -1 && row[doneIdx]) ? row[doneIdx].toString().trim().toLowerCase() : '';
             const isDone = ['sim', 'true', '1', 'x', 'concluído', 'concluido', 'done', 'fechado', 'closed'].includes(rawDone);
 
@@ -2089,18 +2127,18 @@
                     existing.pts = newItem.pts || 0;
                     existing.comment = newItem.comment || existing.comment;
                     existing.forceSpillover = newItem.forceSpillover || false;
-                    
+
                     // Sincroniza o Checkbox (Apenas para marcar como feito, já que ignoramos se já estiver feito acima)
                     if (newItem.done) {
-                        existing.done = true;
-                        existing.doneDay = existing.doneDay || latestObj.currentDay || 1;
+                      existing.done = true;
+                      existing.doneDay = existing.doneDay || latestObj.currentDay || 1;
                     }
 
                     // Sincroniza as Flags (Merge sem duplicados)
                     if (newItem.flags && newItem.flags.length > 0) {
-                        newItem.flags.forEach(f => {
-                            if (!existing.flags.includes(f)) existing.flags.push(f);
-                        });
+                      newItem.flags.forEach(f => {
+                        if (!existing.flags.includes(f)) existing.flags.push(f);
+                      });
                     }
                     updated++;
                   } else {
@@ -2123,7 +2161,7 @@
           event.target.value = ''; // Reset file input
         }
       };
-      
+
       reader.readAsArrayBuffer(file);
     }
     function pulse(id) {
