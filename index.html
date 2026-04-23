@@ -1108,6 +1108,20 @@
           <div class="stat-value pink" id="statLeft">0</div>
         </div>
       </div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Total US</div>
+          <div class="stat-value purple" id="statUsTotal">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">US Concluídas</div>
+          <div class="stat-value green" id="statUsDone">0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">US Restantes</div>
+          <div class="stat-value pink" id="statUsLeft">0</div>
+        </div>
+      </div>
 
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
@@ -1810,6 +1824,14 @@
       document.getElementById('statLeft').textContent = left;
       document.getElementById('progressPct').textContent = pct + '%';
       document.getElementById('progressFill').style.width = pct + '%';
+
+      // US counts
+      const usTotal = items.length;
+      const usDone = items.filter(i => i.done).length;
+      const usLeft = usTotal - usDone;
+      document.getElementById('statUsTotal').textContent = usTotal;
+      document.getElementById('statUsDone').textContent = usDone;
+      document.getElementById('statUsLeft').textContent = usLeft;
     }
 
     // ──────────────────────────────────────────────────────────────
