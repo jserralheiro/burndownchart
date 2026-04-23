@@ -1215,6 +1215,7 @@
     let cloudPushInFlight = false;
     let cloudPushPending = false;
     let bootComplete = false;
+    let lastLocalChange = 0; // Timestamp da última alteração local (cooldown para polling)
 
     function loadLocalDB() {
       try { return JSON.parse(localStorage.getItem(DB_KEY)) || null; } catch { return null; }
@@ -1232,6 +1233,7 @@
     // saveDB: Grava alterações feitas diretamente no objeto db (checkboxes, edições simples)
     function saveDB() {
       db.lastUpdated = Date.now();
+      lastLocalChange = db.lastUpdated;
       localStorage.setItem(DB_KEY, JSON.stringify(db));
       refreshAll();
       scheduleCloudPush();
@@ -1243,6 +1245,7 @@
       if (!quiet) showSpinner();
 
       db.lastUpdated = Date.now();
+      lastLocalChange = db.lastUpdated;
       mutationFn(db);
       localStorage.setItem(DB_KEY, JSON.stringify(db));
       refreshAll();
@@ -1349,7 +1352,9 @@
       // 3. Silent Auto-Polling for Real-Time Collaboration
       setInterval(async () => {
         const spinner = document.getElementById('globalSpinner');
-        if ((spinner && spinner.classList.contains('active')) || cloudPushInFlight || cloudPushPending || !bootComplete) return;
+        // Imunidade de 15s após alterações locais para evitar que dados antigos pisem os novos
+        const cooldownActive = (Date.now() - lastLocalChange) < 15000;
+        if ((spinner && spinner.classList.contains('active')) || cloudPushInFlight || cloudPushPending || !bootComplete || cooldownActive) return;
         try {
           const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, { headers: { 'X-Master-Key': API_KEY } });
           if (res.ok) {
