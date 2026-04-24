@@ -1669,7 +1669,7 @@
       }
 
       const pts = Math.max(0, parseInt(ptsVal) || 0);
-      const newItem = { id: Date.now().toString(), name, usName, dev, pts, done: false, doneDay: null };
+      const newItem = { id: Date.now().toString(), name, usName, dev, pts, done: false, doneDay: null, flags: [] };
 
       document.getElementById('itemID').value = '';
       document.getElementById('itemUsName').value = '';
@@ -2251,6 +2251,7 @@
 
                     // Sincroniza as Flags (Merge sem duplicados)
                     if (newItem.flags && newItem.flags.length > 0) {
+                      if (!existing.flags) existing.flags = [];
                       newItem.flags.forEach(f => {
                         if (!existing.flags.includes(f)) existing.flags.push(f);
                       });
@@ -2271,7 +2272,7 @@
           }
         } catch (err) {
           console.error(err);
-          alert('Erro ao processar ficheiro Excel. Verifica se o ficheiro é válido.');
+          alert(`Erro ao processar ficheiro Excel:\n${err.message || err}`);
         } finally {
           event.target.value = ''; // Reset file input
         }
