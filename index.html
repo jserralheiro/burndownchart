@@ -1264,7 +1264,7 @@
       try {
         // 1. LER a versão mais recente da Cloud antes de gravar
         try {
-          const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest?meta=false&t=${Date.now()}`, {
+          const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest?t=${Date.now()}`, {
             headers: { 'X-Master-Key': API_KEY }
           });
           if (res.ok) {
@@ -1401,8 +1401,12 @@
       refreshAll();
       bindKeys();
 
-      // 2. Sync from cloud in background (silent update)
-      fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest?meta=false&t=${Date.now()}`, {
+      // 2. Sync from cloud in background
+      // If local db is essentially empty (incognito), show spinner while loading
+      const needsSpinner = !db || db.sprints.length === 0 || (db.sprints.length === 1 && db.sprints[0].items.length === 0);
+      if (needsSpinner) showSpinner();
+
+      fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest?t=${Date.now()}`, {
         headers: { 'X-Master-Key': API_KEY }
       })
         .then(r => r.ok ? r.json() : null)
@@ -1410,12 +1414,17 @@
           if (data && data.record) {
             const currentActive = db ? db.activeSprint : null;
             db = initDB(data.record);
-            if (currentActive) db.activeSprint = currentActive;
+            if (currentActive && db.sprints.some(s => s.id === currentActive)) {
+              db.activeSprint = currentActive;
+            }
             refreshAll();
           }
         })
         .catch(() => { })
-        .finally(() => { bootComplete = true; }); // Boot concluído, polling pode começar
+        .finally(() => { 
+          if (needsSpinner) hideSpinner();
+          bootComplete = true; 
+        }); // Boot concluído, polling pode começar
 
       // Allow clicking outside to close dropdowns
       document.addEventListener('click', () => {
@@ -1430,14 +1439,16 @@
         const cooldownActive = (Date.now() - lastLocalChange) < 15000;
         if ((spinner && spinner.classList.contains('active')) || cloudPushInFlight || cloudPushPending || !bootComplete || cooldownActive) return;
         try {
-          const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest?meta=false&t=${Date.now()}`, { headers: { 'X-Master-Key': API_KEY } });
+          const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest?t=${Date.now()}`, { headers: { 'X-Master-Key': API_KEY } });
           if (res.ok) {
             const data = await res.json();
             if (data && data.record && data.record.lastUpdated) {
               if (!db.lastUpdated || data.record.lastUpdated > db.lastUpdated) {
                 const currentActive = db.activeSprint;
                 db = data.record;
-                db.activeSprint = currentActive; // Preserve local active sprint
+                if (currentActive && db.sprints.some(s => s.id === currentActive)) {
+                  db.activeSprint = currentActive; // Preserve local active sprint only if it exists
+                }
                 localStorage.setItem(DB_KEY, JSON.stringify(db));
                 refreshAll();
               }
