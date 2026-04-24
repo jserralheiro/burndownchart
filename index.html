@@ -1254,14 +1254,30 @@
       scheduleCloudPush();
     }
 
-    // scheduleCloudPush: Fila inteligente de gravação na Cloud (nunca bloqueia o utilizador)
+    // scheduleCloudPush: Fila inteligente com Read-Merge-Write (nunca perde dados de colegas)
     async function scheduleCloudPush() {
       if (cloudPushInFlight) {
-        cloudPushPending = true; // Marca que há dados mais recentes para enviar
+        cloudPushPending = true;
         return;
       }
       cloudPushInFlight = true;
       try {
+        // 1. LER a versão mais recente da Cloud antes de gravar
+        try {
+          const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+            headers: { 'X-Master-Key': API_KEY }
+          });
+          if (res.ok) {
+            const cloudData = await res.json();
+            if (cloudData && cloudData.record && cloudData.record.sprints) {
+              mergeFromCloud(cloudData.record);
+            }
+          }
+        } catch(e) { console.warn('Cloud read failed, pushing local state'); }
+
+        // 2. GRAVAR o resultado fundido na Cloud
+        db.lastUpdated = Date.now();
+        localStorage.setItem(DB_KEY, JSON.stringify(db));
         await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
           method: 'PUT',
           headers: {
@@ -1270,15 +1286,71 @@
           },
           body: JSON.stringify(db)
         });
+
+        // 3. Redesenhar o ecrã com os dados fundidos (para mostrar itens de colegas)
+        refreshAll();
+
       } catch (err) {
         console.error('Erro na Cloud:', err);
       } finally {
         cloudPushInFlight = false;
         if (cloudPushPending) {
           cloudPushPending = false;
-          scheduleCloudPush(); // Reenvia com os dados mais recentes
+          scheduleCloudPush();
         }
       }
+    }
+
+    // mergeFromCloud: Funde os dados da Cloud com os dados locais sem perder nada
+    function mergeFromCloud(cloudDB) {
+      if (!cloudDB || !cloudDB.sprints) return;
+
+      cloudDB.sprints.forEach(cloudSprint => {
+        const localSprint = db.sprints.find(s => s.id === cloudSprint.id);
+
+        if (!localSprint) {
+          // Sprint só existe na Cloud (colega criou) → adicionar localmente
+          db.sprints.push(cloudSprint);
+          return;
+        }
+
+        // Fundir itens dentro do mesmo Sprint
+        cloudSprint.items.forEach(cloudItem => {
+          const cloudName = String(cloudItem.name).trim().toLowerCase();
+          const localItem = localSprint.items.find(i =>
+            String(i.name).trim().toLowerCase() === cloudName
+          );
+
+          if (!localItem) {
+            // Item só existe na Cloud (colega adicionou) → adicionar localmente
+            localSprint.items.push(cloudItem);
+          } else {
+            // Item existe em ambos → fundir campos inteligentemente
+            // Se a Cloud marcou como feito e o local não, atualizar
+            if (cloudItem.done && !localItem.done) {
+              localItem.done = true;
+              localItem.doneDay = cloudItem.doneDay || localItem.doneDay;
+            }
+            // Preencher campos vazios com dados da Cloud
+            if (!localItem.usName && cloudItem.usName) localItem.usName = cloudItem.usName;
+            if (!localItem.dev && cloudItem.dev) localItem.dev = cloudItem.dev;
+            if (!localItem.pts && cloudItem.pts) localItem.pts = cloudItem.pts;
+            if (!localItem.comment && cloudItem.comment) localItem.comment = cloudItem.comment;
+            // Fundir flags sem duplicados
+            if (cloudItem.flags && cloudItem.flags.length > 0) {
+              if (!localItem.flags) localItem.flags = [];
+              cloudItem.flags.forEach(f => {
+                if (!localItem.flags.includes(f)) localItem.flags.push(f);
+              });
+            }
+          }
+        });
+
+        // Fundir configuração do Sprint (manter o maior progresso)
+        if (cloudSprint.currentDay > localSprint.currentDay) {
+          localSprint.currentDay = cloudSprint.currentDay;
+        }
+      });
     }
 
     function initDB(serverData) {
