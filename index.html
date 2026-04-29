@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
   <style>
     :root {
@@ -520,10 +521,7 @@
       display: block;
     }
 
-    .item-name {
-      font-size: .86rem;
-      font-weight: 500;
-    }
+    /* .item-name sizing handled above */
 
     .item-pts {
       font-size: .73rem;
@@ -950,9 +948,10 @@
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
         Novo Sprint
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importExcelInput').click()">
-          📂 Importar
-        </button>
+      </button>
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importExcelInput').click()">
+        📂 Importar
+      </button>
         <input type="file" id="importExcelInput"
           accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
           style="display:none" onchange="importDataExcel(event)" />
@@ -994,7 +993,7 @@
       <!-- ── 1. Config Strip ── -->
       <div class="card">
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-          <div class="card-title" style="margin-bottom:0;">⚙ Configuração</div>
+          <div class="card-title" style="margin-bottom:0; transform: translateY(-4px);">⚙ Configuração</div>
           <div class="tabs" style="margin-bottom:0; width:auto;">
             <button class="tab active" id="tab-sprint" onclick="showTab('sprint')">Sprint Atual</button>
             <button class="tab" id="tab-db" onclick="showTab('db')">Histórico</button>
@@ -1026,7 +1025,6 @@
           </div>
         </div>
       </div>
-
       <!-- ── 2. Items Table (visible in Sprint Atual tab) ── -->
       <div id="panel-sprint">
         <div class="card">
@@ -1269,23 +1267,34 @@
           });
           if (res.ok) {
             const cloudData = await res.json();
-            if (cloudData && cloudData.record && cloudData.record.sprints) {
-              mergeFromCloud(cloudData.record);
+            if (cloudData && cloudData.record) {
+              let cloudDB = cloudData.record;
+              if (cloudDB.compressed_db) {
+                cloudDB = JSON.parse(LZString.decompressFromBase64(cloudDB.compressed_db));
+              }
+              if (cloudDB.sprints) mergeFromCloud(cloudDB);
             }
           }
         } catch(e) { console.warn('Cloud read failed, pushing local state'); }
 
-        // 2. GRAVAR o resultado fundido na Cloud
         db.lastUpdated = Date.now();
         localStorage.setItem(DB_KEY, JSON.stringify(db));
-        await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+        
+        // Comprimir DB para ultrapassar limite de 100KB do JSONBin Free Tier
+        const payload = { compressed_db: LZString.compressToBase64(JSON.stringify(db)) };
+        
+        const putRes = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'X-Master-Key': API_KEY
           },
-          body: JSON.stringify(db)
+          body: JSON.stringify(payload)
         });
+
+        if (!putRes.ok) {
+          throw new Error(`JSONBin rejeitou a gravação: ${putRes.status}`);
+        }
 
         // 3. Redesenhar o ecrã com os dados fundidos (para mostrar itens de colegas)
         refreshAll();
@@ -1412,8 +1421,12 @@
         .then(r => r.ok ? r.json() : null)
         .then(data => {
           if (data && data.record) {
+            let cloudDB = data.record;
+            if (cloudDB.compressed_db) {
+              cloudDB = JSON.parse(LZString.decompressFromBase64(cloudDB.compressed_db));
+            }
             const currentActive = db ? db.activeSprint : null;
-            db = initDB(data.record);
+            db = initDB(cloudDB);
             if (currentActive && db.sprints.some(s => s.id === currentActive)) {
               db.activeSprint = currentActive;
             }
@@ -1442,10 +1455,14 @@
           const res = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest?t=${Date.now()}`, { headers: { 'X-Master-Key': API_KEY } });
           if (res.ok) {
             const data = await res.json();
-            if (data && data.record && data.record.lastUpdated) {
-              if (!db.lastUpdated || data.record.lastUpdated > db.lastUpdated) {
+            if (data && data.record) {
+              let cloudDB = data.record;
+              if (cloudDB.compressed_db) {
+                cloudDB = JSON.parse(LZString.decompressFromBase64(cloudDB.compressed_db));
+              }
+              if (cloudDB.lastUpdated && (!db.lastUpdated || cloudDB.lastUpdated > db.lastUpdated)) {
                 const currentActive = db.activeSprint;
-                db = data.record;
+                db = cloudDB;
                 if (currentActive && db.sprints.some(s => s.id === currentActive)) {
                   db.activeSprint = currentActive; // Preserve local active sprint only if it exists
                 }
@@ -2083,7 +2100,8 @@
     //  Helpers
     // ──────────────────────────────────────────────────────────────
     function escHtml(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      if (s == null) return '';
+      return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
     function toggleExportMenu(e) {
       e.stopPropagation();
@@ -2285,8 +2303,13 @@
       el.style.transform = 'scale(0.95)'; setTimeout(() => el.style.transform = '', 160);
     }
 
-    // ── Esc to close modal
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+    // ── Esc to close modals
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        closeModal();
+        closeCommentModal();
+      }
+    });
   </script>
 </body>
 
