@@ -1331,7 +1331,10 @@
           );
 
           if (!localItem) {
-            // Item só existe na Cloud (colega adicionou) → adicionar localmente
+            // Item só existe na Cloud — verificar se foi eliminado localmente
+            const deletedNames = localSprint.deletedNames || [];
+            if (deletedNames.includes(cloudName)) return; // Foi apagado de propósito, ignorar
+            // Colega adicionou → adicionar localmente
             localSprint.items.push(cloudItem);
           } else {
             // Item existe em ambos → fundir campos inteligentemente
@@ -1729,7 +1732,18 @@
     function deleteItem(id) {
       mutateDB(latestDB => {
         const s = latestDB.sprints.find(sp => sp.id === latestDB.activeSprint);
-        if (s) s.items = s.items.filter(i => i.id !== id);
+        if (s) {
+          const item = s.items.find(i => i.id === id);
+          if (item) {
+            // Registar o nome normalizado para que o merge não o ressuscite
+            if (!s.deletedNames) s.deletedNames = [];
+            const normalizedName = String(item.name).trim().toLowerCase();
+            if (!s.deletedNames.includes(normalizedName)) {
+              s.deletedNames.push(normalizedName);
+            }
+          }
+          s.items = s.items.filter(i => i.id !== id);
+        }
       }, { quiet: true });
     }
 
