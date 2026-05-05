@@ -1390,6 +1390,13 @@
                 if (!localItem.flags.includes(f)) localItem.flags.push(f);
               });
             }
+            
+            // Garantir que novas propriedades criadas na Cloud (ex: inReview) não se perdem se o browser local tiver cache antiga
+            Object.keys(cloudItem).forEach(k => {
+              if (localItem[k] === undefined) {
+                localItem[k] = cloudItem[k];
+              }
+            });
           }
         });
 
