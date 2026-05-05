@@ -447,7 +447,7 @@
 
     .items-table-header {
       display: grid;
-      grid-template-columns: 32px 130px 1fr 130px 80px 84px;
+      grid-template-columns: 32px 130px 1fr 130px 80px 120px;
       gap: 0 12px;
       padding: 7px 14px;
       font-size: .72rem;
@@ -461,7 +461,7 @@
 
     .item-card {
       display: grid;
-      grid-template-columns: 32px 130px 1fr 130px 80px 84px;
+      grid-template-columns: 32px 130px 1fr 130px 80px 120px;
       gap: 0 12px;
       align-items: center;
       padding: 6px 14px;
@@ -912,6 +912,15 @@
         transform: rotate(360deg);
       }
     }
+
+    /* ── In Review Feature ── */
+    
+    .item-del.review-active {
+      color: #a78bfa;
+    }
+    .item-del.review-active:hover {
+      color: #8b5cf6;
+    }
   </style>
 </head>
 
@@ -1124,7 +1133,7 @@
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <div class="card-title" style="margin-bottom: 0;">📉 Burndown — <span id="sprintLabel">—</span></div>
-          <select id="devFilter" class="sprint-select" onchange="filterByDev(this.value)"
+          <select id="devFilter" class="sprint-select dev-filter-select" onchange="filterByDev(this.value)"
             style="min-width: 140px; padding: 6px 10px; font-size: .75rem; border-radius: 6px;">
             <option value="all">Todos os Devs</option>
           </select>
@@ -1139,6 +1148,28 @@
           </div>
           <div class="progress-track">
             <div class="progress-fill" id="progressFill" style="width:0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div class="card-title" style="margin-bottom: 0;">🔍 Dev Complete (In Review) — <span id="reviewSprintLabel">—</span></div>
+          <select id="devFilter2" class="sprint-select dev-filter-select" onchange="filterByDev(this.value)"
+            style="min-width: 140px; padding: 6px 10px; font-size: .75rem; border-radius: 6px;">
+            <option value="all">Todos os Devs</option>
+          </select>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="reviewBurndownChart"></canvas>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-label">
+            <span>Progresso Dev Complete</span>
+            <span id="reviewProgressPct">0%</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" id="reviewProgressFill" style="width:0%; background: linear-gradient(90deg, #8b5cf6, #a78bfa);"></div>
           </div>
         </div>
       </div>
@@ -1343,6 +1374,10 @@
               localItem.done = true;
               localItem.doneDay = cloudItem.doneDay || localItem.doneDay;
             }
+            if (cloudItem.inReview && !localItem.inReview && !localItem.done) {
+              localItem.inReview = true;
+              localItem.reviewDay = cloudItem.reviewDay || localItem.reviewDay;
+            }
             // Preencher campos vazios com dados da Cloud
             if (!localItem.usName && cloudItem.usName) localItem.usName = cloudItem.usName;
             if (!localItem.dev && cloudItem.dev) localItem.dev = cloudItem.dev;
@@ -1485,6 +1520,7 @@
       updateDevFilterDropdown();
       renderItems();
       renderChart();
+      renderReviewChart();
       updateStats();
     }
 
@@ -1568,6 +1604,8 @@
       document.getElementById('sprintDays').value = s.days;
       document.getElementById('currentDay').value = s.currentDay;
       document.getElementById('sprintLabel').textContent = s.name;
+      const rLabel = document.getElementById('reviewSprintLabel');
+      if (rLabel) rLabel.textContent = s.name;
     }
 
     function applyConfig() {
@@ -1578,6 +1616,8 @@
       s.currentDay = Math.min(s.days, Math.max(1, parseInt(document.getElementById('currentDay').value) || 1));
       document.getElementById('currentDay').value = s.currentDay;
       document.getElementById('sprintLabel').textContent = s.name;
+      const rLabel = document.getElementById('reviewSprintLabel');
+      if (rLabel) rLabel.textContent = s.name;
       saveDB();
       pulse('applyBtn');
     }
@@ -1602,7 +1642,7 @@
 
     function updateDevFilterDropdown() {
       const s = getActive(db);
-      const select = document.getElementById('devFilter');
+      const selects = document.querySelectorAll('.dev-filter-select');
       const currentVal = selectedDevFilter;
 
       const devs = new Set();
@@ -1618,20 +1658,29 @@
         html += `<option value="${escHtml(d)}">${escHtml(d)}</option>`;
       });
 
-      select.innerHTML = html;
-      if (devs.has(currentVal)) {
-        select.value = currentVal;
-      } else {
-        select.value = 'all';
-        selectedDevFilter = 'all';
-      }
+      selects.forEach(select => {
+        select.innerHTML = html;
+        if (devs.has(currentVal)) {
+          select.value = currentVal;
+        } else {
+          select.value = 'all';
+          selectedDevFilter = 'all';
+        }
+      });
     }
 
     function filterByDev(val) {
       selectedDevFilter = val;
       currentPage = 1;
+      
+      // Update all dropdowns to reflect the chosen value
+      document.querySelectorAll('.dev-filter-select').forEach(sel => {
+        if (sel.value !== val) sel.value = val;
+      });
+
       renderItems();
       renderChart();
+      renderReviewChart();
       updateStats();
     }
 
@@ -1689,7 +1738,7 @@
       }
 
       const pts = Math.max(0, parseInt(ptsVal) || 0);
-      const newItem = { id: Date.now().toString(), name, usName, dev, pts, done: false, doneDay: null, flags: [] };
+      const newItem = { id: Date.now().toString(), name, usName, dev, pts, done: false, doneDay: null, flags: [], inReview: false, reviewDay: null };
 
       document.getElementById('itemID').value = '';
       document.getElementById('itemUsName').value = '';
@@ -1709,6 +1758,16 @@
       if (!item) return;
       item.done = !item.done;
       item.doneDay = item.done ? s.currentDay : null;
+      saveDB();
+    }
+
+    function toggleInReview(id) {
+      const s = getActive(db);
+      const item = s.items.find(i => i.id === id);
+      if (!item) return;
+      
+      item.inReview = !item.inReview;
+      item.reviewDay = item.inReview ? s.currentDay : null;
       saveDB();
     }
 
@@ -1891,11 +1950,17 @@
           <div class="checkbox-wrap ${item.done ? 'checked' : ''}" onclick="toggleItem('${item.id}')">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <span class="item-name"><span>${escHtml(item.name)}</span>${isSpillover(item) ? '<span class="spillover-wrap">⏪<span class="flag-tooltip">Spillover de sprint passado</span></span>' : ''}</span>
+          <span class="item-name">
+            <span>${escHtml(item.name)}</span>
+            ${isSpillover(item) ? '<span class="spillover-wrap">⏪<span class="flag-tooltip">Spillover de sprint passado</span></span>' : ''}
+          </span>
           <span class="item-meta" style="font-size:.85rem;">${escHtml(item.usName || '—')}</span>
           <span class="item-meta" style="font-size:.85rem;">${escHtml(item.dev || '—')}</span>
           <span class="item-pts" style="text-align:center;">${item.pts} SP</span>
           <div style="display:flex; gap:2px; align-items:center;">
+            <button class="item-del ${item.inReview ? 'review-active' : ''}" onclick="toggleInReview('${item.id}')" title="${item.inReview ? 'Em Review' : 'Marcar Em Review'}">
+              <svg width="${item.inReview ? '15' : '14'}" height="${item.inReview ? '15' : '14'}" viewBox="0 0 24 24" fill="${item.inReview ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${item.inReview ? '3' : '2.5'}" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            </button>
             <button class="item-del" style="${item.comment ? 'color: var(--accent);' : ''}" onclick="openCommentModal('${item.id}')" title="Comentários">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="${item.comment ? 'var(--accent)' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             </button>
@@ -2067,6 +2132,107 @@
       });
     }
 
+    let reviewChart = null;
+    function renderReviewChart() {
+      const s = getActive(db);
+      const days = s ? s.days : 10;
+      const curDay = s ? s.currentDay : 0;
+      const items = getFilteredItems();
+      const total = items.reduce((a, i) => a + i.pts, 0);
+
+      const labels = ['Início', ...Array.from({ length: days }, (_, i) => `Dia ${i + 1}`)];
+      const ideal = labels.map((_, i) => +(total - (total / days) * i).toFixed(2));
+
+      const actual = [total];
+      for (let d = 1; d <= days; d++) {
+        if (d <= curDay) {
+          const burned = items
+            .filter(i => {
+              if (i.done && i.doneDay != null && i.doneDay <= d) return true;
+              if (i.inReview && i.reviewDay != null && i.reviewDay <= d) return true;
+              return false;
+            })
+            .reduce((a, i) => a + i.pts, 0);
+          actual.push(total - burned);
+        } else {
+          actual.push(null);
+        }
+      }
+
+      // Update progress bar
+      const burnedNow = total - (actual[curDay] || 0);
+      const pct = total ? Math.round(burnedNow / total * 100) : 0;
+      document.getElementById('reviewProgressPct').textContent = pct + '%';
+      document.getElementById('reviewProgressFill').style.width = pct + '%';
+
+      const ctx = document.getElementById('reviewBurndownChart').getContext('2d');
+      const existing = Chart.getChart('reviewBurndownChart');
+      if (existing) existing.destroy();
+      reviewChart = null;
+
+      const grad = ctx.createLinearGradient(0, 0, 0, 340);
+      grad.addColorStop(0, 'rgba(167, 139, 250, 0.4)');
+      grad.addColorStop(1, 'rgba(167, 139, 250, 0)');
+
+      reviewChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Linha Ideal',
+              data: ideal,
+              borderColor: '#00d4aacc',
+              borderWidth: 2,
+              borderDash: [6, 4],
+              pointRadius: 0,
+              fill: false,
+              tension: 0,
+              order: 2,
+            },
+            {
+              label: 'Aguarda Review',
+              data: actual,
+              borderColor: '#a78bfa',
+              borderWidth: 3,
+              pointBackgroundColor: actual.map((v, i) => {
+                if (v === null) return 'transparent';
+                const idealV = total - (total / days) * i;
+                return v > idealV ? '#ff5c7a' : '#34d399';
+              }),
+              pointBorderColor: '#13162a',
+              pointBorderWidth: 2,
+              pointRadius: actual.map(v => v === null ? 0 : 5),
+              pointHoverRadius: 8,
+              fill: true,
+              backgroundColor: grad,
+              tension: 0.3,
+              order: 1,
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { labels: { color: '#8889aa', font: { family: 'Inter', size: 12 }, boxWidth: 18, padding: 18 } },
+            tooltip: {
+              backgroundColor: '#1a1f38', borderColor: '#ffffff14', borderWidth: 1,
+              titleColor: '#e8eaf6', bodyColor: '#8889aa', padding: 12,
+              callbacks: { label: c => ` ${c.dataset.label}: ${c.raw !== null ? c.raw + ' SP' : '—'}` }
+            }
+          },
+          scales: {
+            x: { grid: { color: '#ffffff08' }, ticks: { color: '#8889aa', font: { family: 'Inter', size: 11 }, maxRotation: 0 } },
+            y: {
+              beginAtZero: true, suggestedMax: total > 0 ? Math.ceil(total * 1.1) : 10,
+              grid: { color: '#ffffff0a' }, ticks: { color: '#8889aa', font: { family: 'Inter', size: 11 }, callback: v => v + ' SP' }
+            }
+          }
+        }
+      });
+    }
+
     // ──────────────────────────────────────────────────────────────
     //  Modal — New Sprint
     // ──────────────────────────────────────────────────────────────
@@ -2139,10 +2305,11 @@
       // UTF-8 BOM so Excel automatically recognizes characters like á, ç, etc.
       let csv = '\uFEFF';
       // ';' delimiter for Excel PT
-      csv += 'US ID;US Name;Dev;SP;Status;Dia;Flags;Spillover;Notas\n';
+      csv += 'US ID;US Name;Dev;SP;Status;Em Review;Dia;Flags;Spillover;Notas\n';
 
       sprint.items.forEach(item => {
         const estado = item.done ? 'Concluído' : 'Aberto';
+        const emReview = item.inReview ? 'Sim' : 'Não';
         const dia = item.doneDay ? item.doneDay : '';
         const flags = (item.flags || []).join(', ');
         const spillover = isSpillover(item) ? 'Sim' : 'Não';
@@ -2159,6 +2326,7 @@
           escapeField(item.dev),
           item.pts,
           estado,
+          emReview,
           dia,
           escapeField(flags),
           spillover,
@@ -2207,6 +2375,7 @@
           const spillIdx = getIdx('spillover');
           const flagsIdx = getIdx('flag');
           const doneIdx = headers.findIndex(h => h.includes('conclu') || h.includes('done') || h.includes('estado') || h.includes('status') || h === 'ok');
+          const reviewIdx = headers.findIndex(h => h.includes('review'));
 
           if (idIdx === -1) {
             alert('Coluna "US ID" não encontrada no ficheiro.');
@@ -2230,6 +2399,9 @@
 
             const rawDone = (doneIdx !== -1 && row[doneIdx]) ? row[doneIdx].toString().trim().toLowerCase() : '';
             const isDone = ['sim', 'true', '1', 'x', 'concluído', 'concluido', 'done', 'fechado', 'closed'].includes(rawDone);
+            
+            const rawReview = (reviewIdx !== -1 && row[reviewIdx]) ? row[reviewIdx].toString().trim().toLowerCase() : '';
+            const isInReview = ['sim', 'true', '1', 'x', 'yes'].includes(rawReview);
 
             const item = {
               id: Date.now().toString() + Math.floor(Math.random() * 10000),
@@ -2239,6 +2411,8 @@
               pts: sp,
               done: isDone,
               doneDay: isDone ? 1 : null, // Default ao dia 1 se vier do Excel como feito
+              inReview: isInReview,
+              reviewDay: isInReview ? 1 : null,
               comment: notas,
               flags: []
             };
@@ -2279,6 +2453,10 @@
                     if (newItem.done) {
                       existing.done = true;
                       existing.doneDay = existing.doneDay || latestObj.currentDay || 1;
+                    }
+                    if (newItem.inReview && !existing.inReview && !existing.done) {
+                      existing.inReview = true;
+                      existing.reviewDay = existing.reviewDay || latestObj.currentDay || 1;
                     }
 
                     // Sincroniza as Flags (Merge sem duplicados)
