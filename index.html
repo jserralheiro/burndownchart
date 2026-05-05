@@ -1764,7 +1764,7 @@
     function toggleInReview(id) {
       const s = getActive(db);
       const item = s.items.find(i => i.id === id);
-      if (!item) return;
+      if (!item || item.done) return;
       
       item.inReview = !item.inReview;
       item.reviewDay = item.inReview ? s.currentDay : null;
@@ -1958,8 +1958,8 @@
           <span class="item-meta" style="font-size:.85rem;">${escHtml(item.dev || '—')}</span>
           <span class="item-pts" style="text-align:center;">${item.pts} SP</span>
           <div style="display:flex; gap:2px; align-items:center;">
-            <button class="item-del ${item.inReview ? 'review-active' : ''}" onclick="toggleInReview('${item.id}')" title="${item.inReview ? 'Em Review' : 'Marcar Em Review'}">
-              <svg width="${item.inReview ? '15' : '14'}" height="${item.inReview ? '15' : '14'}" viewBox="0 0 24 24" fill="${item.inReview ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${item.inReview ? '3' : '2.5'}" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <button class="item-del ${item.inReview && !item.done ? 'review-active' : ''}" onclick="toggleInReview('${item.id}')" title="${item.inReview && !item.done ? 'Em Review' : 'Marcar Em Review'}" ${item.done ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}>
+              <svg width="${item.inReview && !item.done ? '15' : '14'}" height="${item.inReview && !item.done ? '15' : '14'}" viewBox="0 0 24 24" fill="${item.inReview && !item.done ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${item.inReview && !item.done ? '3' : '2.5'}" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </button>
             <button class="item-del" style="${item.comment ? 'color: var(--accent);' : ''}" onclick="openCommentModal('${item.id}')" title="Comentários">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="${item.comment ? 'var(--accent)' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
