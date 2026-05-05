@@ -1373,10 +1373,12 @@
             if (cloudItem.done && !localItem.done) {
               localItem.done = true;
               localItem.doneDay = cloudItem.doneDay || localItem.doneDay;
+              if (cloudItem.doneAt) localItem.doneAt = cloudItem.doneAt;
             }
             if (cloudItem.inReview && !localItem.inReview && !localItem.done) {
               localItem.inReview = true;
               localItem.reviewDay = cloudItem.reviewDay || localItem.reviewDay;
+              if (cloudItem.reviewedAt) localItem.reviewedAt = cloudItem.reviewedAt;
             }
             // Preencher campos vazios com dados da Cloud
             if (!localItem.usName && cloudItem.usName) localItem.usName = cloudItem.usName;
@@ -1765,6 +1767,9 @@
       if (!item) return;
       item.done = !item.done;
       item.doneDay = item.done ? s.currentDay : null;
+      item.doneAt = item.done ? new Date().toISOString() : null;
+      // Limpar visualmente o inReview ao marcar como done (reviewedAt/reviewDay preservados)
+      if (item.done && item.inReview) item.inReview = false;
       saveDB();
     }
 
@@ -1775,6 +1780,7 @@
       
       item.inReview = !item.inReview;
       item.reviewDay = item.inReview ? s.currentDay : null;
+      item.reviewedAt = item.inReview ? new Date().toISOString() : null;
       saveDB();
     }
 
@@ -1788,6 +1794,9 @@
       filtered.forEach(item => {
         item.done = !allDone;
         item.doneDay = item.done ? s.currentDay : null;
+        item.doneAt = item.done ? new Date().toISOString() : null;
+        // Limpar visualmente o inReview ao marcar como done (reviewedAt/reviewDay preservados)
+        if (item.done && item.inReview) item.inReview = false;
       });
 
       saveDB();
@@ -2312,12 +2321,15 @@
       // UTF-8 BOM so Excel automatically recognizes characters like á, ç, etc.
       let csv = '\uFEFF';
       // ';' delimiter for Excel PT
-      csv += 'US ID;US Name;Dev;SP;Status;Em Review;Dia;Flags;Spillover;Notas\n';
+      csv += 'US ID;US Name;Dev;SP;Status;Done Day;Done At;Em Review;Review Day;Reviewed At;Flags;Spillover;Notas\n';
 
       sprint.items.forEach(item => {
         const estado = item.done ? 'Concluído' : 'Aberto';
         const emReview = item.inReview ? 'Sim' : 'Não';
-        const dia = item.doneDay ? item.doneDay : '';
+        const doneDay = item.doneDay ? item.doneDay : '';
+        const doneAt = item.doneAt || '';
+        const reviewDay = item.reviewDay ? item.reviewDay : '';
+        const reviewedAt = item.reviewedAt || '';
         const flags = (item.flags || []).join(', ');
         const spillover = isSpillover(item) ? 'Sim' : 'Não';
 
@@ -2333,8 +2345,11 @@
           escapeField(item.dev),
           item.pts,
           estado,
+          doneDay,
+          escapeField(doneAt),
           emReview,
-          dia,
+          reviewDay,
+          escapeField(reviewedAt),
           escapeField(flags),
           spillover,
           escapeField(item.comment)
