@@ -268,6 +268,7 @@
 
     input[type="number"],
     input[type="text"],
+    input[type="date"],
     textarea {
       width: 100%;
       background: var(--surface2);
@@ -289,6 +290,17 @@
 
     input[type="number"]::-webkit-inner-spin-button {
       opacity: .4;
+    }
+
+    input[type="date"] {
+      color-scheme: dark;
+      padding-right: 8px;
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(.7);
+      cursor: pointer;
+      margin-left: 4px;
     }
 
     .inline-input {
@@ -1004,27 +1016,40 @@
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
           <div class="card-title" style="margin-bottom:0; transform: translateY(-4px);">⚙ Configuração</div>
           <div class="tabs" style="margin-bottom:0; width:auto;">
-            <button class="tab active" id="tab-sprint" onclick="showTab('sprint')">Sprint Atual</button>
+            <button class="tab active" id="tab-sprint" onclick="showTab('sprint', true)">Sprint Atual</button>
             <button class="tab" id="tab-db" onclick="showTab('db')">Histórico</button>
           </div>
         </div>
         <div class="config-strip">
           <div>
             <label for="sprintName">Nome do Sprint</label>
-            <input type="text" id="sprintName" placeholder="Ex: Sprint 1" />
+            <input type="text" id="sprintName" placeholder="Ex: Sprint 1" disabled />
           </div>
           <div>
-            <label for="sprintDays">Duração (dias)</label>
-            <input type="number" id="sprintDays" min="1" max="30" value="10" />
+            <label for="sprintStartDate">Data Início</label>
+            <input type="date" id="sprintStartDate" disabled />
           </div>
           <div>
-            <label for="currentDay">Dia Atual</label>
-            <input type="number" id="currentDay" min="1" max="30" value="1" />
+            <label for="sprintEndDate">Data Fim</label>
+            <input type="date" id="sprintEndDate" disabled />
+          </div>
+          <div>
+            <label>Dia Atual</label>
+            <span id="computedDayDisplay" style="display:block;font-size:.88rem;color:var(--text);padding:9px 0;font-weight:500">—</span>
           </div>
           <div>
             <label>&nbsp;</label>
-            <button class="btn btn-primary btn-sm" onclick="applyConfig()" id="applyBtn"
+            <button class="btn btn-ghost btn-sm" onclick="enableEditMode()" id="editBtn"
               style="transform: translateY(-4px);">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                stroke-linecap="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              Editar
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="applyConfig()" id="applyBtn"
+              style="transform: translateY(-4px); display: none;">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
                 stroke-linecap="round">
                 <polyline points="20 6 9 17 4 12" />
@@ -1187,12 +1212,12 @@
       </div>
       <div class="form-grid">
         <div class="form-row">
-          <label for="newSprintDays">Duração (dias)</label>
-          <input type="number" id="newSprintDays" min="1" max="30" value="10" />
+          <label for="newSprintStartDate">Data Início</label>
+          <input type="date" id="newSprintStartDate" />
         </div>
         <div class="form-row">
-          <label for="newCurrentDay">Dia Atual</label>
-          <input type="number" id="newCurrentDay" min="1" max="30" value="1" />
+          <label for="newSprintEndDate">Data Fim</label>
+          <input type="date" id="newSprintEndDate" />
         </div>
       </div>
       <div class="modal-actions">
@@ -1403,6 +1428,10 @@
         });
 
         // Fundir configuração do Sprint (manter o maior progresso)
+        if (cloudSprint.startDate && !localSprint.startDate) {
+          localSprint.startDate = cloudSprint.startDate;
+          localSprint.endDate = cloudSprint.endDate;
+        }
         if (cloudSprint.currentDay > localSprint.currentDay) {
           localSprint.currentDay = cloudSprint.currentDay;
         }
@@ -1416,12 +1445,12 @@
         if (serverData === null) {
           // Only create a default sprint when we KNOW there's no server data
           // (i.e., this is a truly fresh start, not just a slow network)
-          const first = newSprintObj('Sprint 1', 10, 1);
+          const first = newSprintObj('Sprint 1', null, null);
           db = { activeSprint: first.id, sprints: [first] };
           // DON'T saveDB here — wait for cloud check to complete first
         } else {
           // Server returned empty — safe to create default and save
-          const first = newSprintObj('Sprint 1', 10, 1);
+          const first = newSprintObj('Sprint 1', null, null);
           db = { activeSprint: first.id, sprints: [first] };
           localStorage.setItem(DB_KEY, JSON.stringify(db));
         }
@@ -1432,8 +1461,43 @@
       return db;
     }
 
-    function newSprintObj(name, days, currentDay) {
-      return { id: Date.now().toString(), name, days, currentDay: currentDay ?? 1, items: [], createdAt: new Date().toISOString() };
+    // Conta dias úteis (seg-sex) entre duas datas (inclusive)
+    function countBusinessDays(start, end) {
+      let count = 0;
+      const d = new Date(start);
+      const e = new Date(end);
+      while (d <= e) {
+        const dow = d.getDay();
+        if (dow !== 0 && dow !== 6) count++;
+        d.setDate(d.getDate() + 1);
+      }
+      return count;
+    }
+
+    // Calcula o dia atual do sprint baseado nas datas
+    function getSprintCurrentDay(sprint) {
+      if (sprint.startDate && sprint.endDate) {
+        const today = new Date(); today.setHours(0,0,0,0);
+        const start = new Date(sprint.startDate); start.setHours(0,0,0,0);
+        const end = new Date(sprint.endDate); end.setHours(0,0,0,0);
+        if (today < start) return 0; // Sprint não começou
+        if (today > end) return countBusinessDays(start, end); // Sprint terminou
+        return countBusinessDays(start, today);
+      }
+      return sprint.currentDay || 1; // Fallback para sprints antigos
+    }
+
+    // Calcula duração total do sprint em dias úteis
+    function getSprintDays(sprint) {
+      if (sprint.startDate && sprint.endDate) {
+        return countBusinessDays(new Date(sprint.startDate), new Date(sprint.endDate));
+      }
+      return sprint.days || 10; // Fallback para sprints antigos
+    }
+
+    function newSprintObj(name, startDate, endDate) {
+      const days = (startDate && endDate) ? countBusinessDays(new Date(startDate), new Date(endDate)) : 10;
+      return { id: Date.now().toString(), name, days, currentDay: 1, startDate: startDate || null, endDate: endDate || null, items: [], createdAt: new Date().toISOString() };
     }
 
     function getActive(db) { return db.sprints.find(s => s.id === db.activeSprint); }
@@ -1577,9 +1641,9 @@
           const div = document.createElement('div');
           div.className = 'sprint-item' + (s.id === db.activeSprint ? ' active' : '');
           div.innerHTML = `
-          <div class="sprint-item-info" onclick="switchSprint('${s.id}'); showTab('sprint');" style="cursor:pointer">
+          <div class="sprint-item-info" onclick="switchSprint('${s.id}'); showTab('sprint'); document.getElementById('tab-sprint').classList.remove('active');" style="cursor:pointer">
             <div class="sprint-item-name">${escHtml(s.name)}</div>
-            <div class="sprint-item-meta">${s.days} dias · ${total} SP · criado ${date}</div>
+            <div class="sprint-item-meta">${getSprintDays(s)} dias · ${total} SP · ${s.startDate ? new Date(s.startDate).toLocaleDateString('pt-PT') + ' → ' + new Date(s.endDate).toLocaleDateString('pt-PT') : 'criado ' + date}</div>
           </div>
           ${pct === 100 ? '<span class="sprint-item-badge">✓ Concluído</span>' : `<span style="font-size:.75rem;color:var(--muted);margin-left:8px;">${pct}%</span>`}
           <div class="sprint-item-actions">
@@ -1595,12 +1659,25 @@
     // ──────────────────────────────────────────────────────────────
     //  Tabs
     // ──────────────────────────────────────────────────────────────
-    function showTab(t) {
+    function showTab(t, autoSelect) {
       document.getElementById('panel-sprint').style.display = t === 'sprint' ? '' : 'none';
       document.getElementById('panel-db').style.display = t === 'db' ? '' : 'none';
       document.getElementById('tab-sprint').classList.toggle('active', t === 'sprint');
       document.getElementById('tab-db').classList.toggle('active', t === 'db');
       if (t === 'db') populateSprintList();
+      if (t === 'sprint' && autoSelect) {
+        // Auto-selecionar o sprint cuja data inclui hoje
+        const today = new Date(); today.setHours(0,0,0,0);
+        const current = db.sprints.find(s => {
+          if (!s.startDate || !s.endDate) return false;
+          const start = new Date(s.startDate); start.setHours(0,0,0,0);
+          const end = new Date(s.endDate); end.setHours(0,0,0,0);
+          return today >= start && today <= end;
+        });
+        if (current && current.id !== db.activeSprint) {
+          switchSprint(current.id);
+        }
+      }
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -1610,25 +1687,54 @@
       const s = getActive(db);
       if (!s) return;
       document.getElementById('sprintName').value = s.name;
-      document.getElementById('sprintDays').value = s.days;
-      document.getElementById('currentDay').value = s.currentDay;
+      document.getElementById('sprintStartDate').value = s.startDate || '';
+      document.getElementById('sprintEndDate').value = s.endDate || '';
+      const curDay = getSprintCurrentDay(s);
+      const totalDays = getSprintDays(s);
+      document.getElementById('computedDayDisplay').textContent = s.startDate ? `Dia ${curDay} / ${totalDays}` : '—';
       document.getElementById('sprintLabel').textContent = s.name;
       const rLabel = document.getElementById('reviewSprintLabel');
       if (rLabel) rLabel.textContent = s.name;
+      disableEditMode();
+    }
+
+    function enableEditMode() {
+      document.getElementById('sprintName').disabled = false;
+      document.getElementById('sprintStartDate').disabled = false;
+      document.getElementById('sprintEndDate').disabled = false;
+      document.getElementById('editBtn').style.display = 'none';
+      document.getElementById('applyBtn').style.display = 'inline-flex';
+    }
+
+    function disableEditMode() {
+      document.getElementById('sprintName').disabled = true;
+      document.getElementById('sprintStartDate').disabled = true;
+      document.getElementById('sprintEndDate').disabled = true;
+      document.getElementById('editBtn').style.display = 'inline-flex';
+      document.getElementById('applyBtn').style.display = 'none';
     }
 
     function applyConfig() {
       const s = getActive(db);
       if (!s) return;
       s.name = document.getElementById('sprintName').value.trim() || s.name;
-      s.days = Math.max(1, parseInt(document.getElementById('sprintDays').value) || 10);
-      s.currentDay = Math.min(s.days, Math.max(1, parseInt(document.getElementById('currentDay').value) || 1));
-      document.getElementById('currentDay').value = s.currentDay;
+      const startDate = document.getElementById('sprintStartDate').value;
+      const endDate = document.getElementById('sprintEndDate').value;
+      if (startDate && endDate) {
+        s.startDate = startDate;
+        s.endDate = endDate;
+        s.days = countBusinessDays(new Date(startDate), new Date(endDate));
+        s.currentDay = getSprintCurrentDay(s);
+      }
+      const curDay = getSprintCurrentDay(s);
+      const totalDays = getSprintDays(s);
+      document.getElementById('computedDayDisplay').textContent = s.startDate ? `Dia ${curDay} / ${totalDays}` : '—';
       document.getElementById('sprintLabel').textContent = s.name;
       const rLabel = document.getElementById('reviewSprintLabel');
       if (rLabel) rLabel.textContent = s.name;
       saveDB();
-      pulse('applyBtn');
+      disableEditMode();
+      pulse('editBtn');
     }
 
     // ──────────────────────────────────────────────────────────────
@@ -1766,7 +1872,7 @@
       const item = s.items.find(i => i.id === id);
       if (!item) return;
       item.done = !item.done;
-      item.doneDay = item.done ? s.currentDay : null;
+      item.doneDay = item.done ? getSprintCurrentDay(s) : null;
       item.doneAt = item.done ? new Date().toISOString() : null;
       // Limpar visualmente o inReview ao marcar como done (reviewedAt/reviewDay preservados)
       if (item.done && item.inReview) item.inReview = false;
@@ -1779,7 +1885,7 @@
       if (!item) return;
       
       item.inReview = !item.inReview;
-      item.reviewDay = item.inReview ? s.currentDay : null;
+      item.reviewDay = item.inReview ? getSprintCurrentDay(s) : null;
       item.reviewedAt = item.inReview ? new Date().toISOString() : null;
       saveDB();
     }
@@ -1793,7 +1899,7 @@
       const allDone = filtered.every(i => i.done);
       filtered.forEach(item => {
         item.done = !allDone;
-        item.doneDay = item.done ? s.currentDay : null;
+        item.doneDay = item.done ? getSprintCurrentDay(s) : null;
         item.doneAt = item.done ? new Date().toISOString() : null;
         // Limpar visualmente o inReview ao marcar como done (reviewedAt/reviewDay preservados)
         if (item.done && item.inReview) item.inReview = false;
@@ -2044,8 +2150,8 @@
     // ──────────────────────────────────────────────────────────────
     function renderChart() {
       const s = getActive(db);
-      const days = s ? s.days : 10;
-      const curDay = s ? s.currentDay : 0;
+      const days = s ? getSprintDays(s) : 10;
+      const curDay = s ? getSprintCurrentDay(s) : 0;
       const items = getFilteredItems();
       const total = items.reduce((a, i) => a + i.pts, 0);
 
@@ -2151,8 +2257,8 @@
     let reviewChart = null;
     function renderReviewChart() {
       const s = getActive(db);
-      const days = s ? s.days : 10;
-      const curDay = s ? s.currentDay : 0;
+      const days = s ? getSprintDays(s) : 10;
+      const curDay = s ? getSprintCurrentDay(s) : 0;
       const items = getFilteredItems();
       const total = items.reduce((a, i) => a + i.pts, 0);
 
@@ -2255,8 +2361,8 @@
     function openNewSprintModal() {
       const n = db.sprints.length + 1;
       document.getElementById('newSprintName').value = `Sprint ${n}`;
-      document.getElementById('newSprintDays').value = '10';
-      document.getElementById('newCurrentDay').value = '0';
+      document.getElementById('newSprintStartDate').value = '';
+      document.getElementById('newSprintEndDate').value = '';
       document.getElementById('modalOverlay').classList.add('open');
       setTimeout(() => document.getElementById('newSprintName').select(), 100);
     }
@@ -2266,9 +2372,9 @@
 
     function createSprint() {
       const name = document.getElementById('newSprintName').value.trim() || `Sprint ${db.sprints.length + 1}`;
-      const days = Math.max(1, parseInt(document.getElementById('newSprintDays').value) || 10);
-      const cur = Math.min(days, Math.max(1, parseInt(document.getElementById('newCurrentDay').value) || 1));
-      const s = newSprintObj(name, days, cur);
+      const startDate = document.getElementById('newSprintStartDate').value || null;
+      const endDate = document.getElementById('newSprintEndDate').value || null;
+      const s = newSprintObj(name, startDate, endDate);
 
       closeModal();
       mutateDB(latestDB => {
@@ -2474,11 +2580,11 @@
                     // Sincroniza o Checkbox (Apenas para marcar como feito, já que ignoramos se já estiver feito acima)
                     if (newItem.done) {
                       existing.done = true;
-                      existing.doneDay = existing.doneDay || latestObj.currentDay || 1;
+                      existing.doneDay = existing.doneDay || getSprintCurrentDay(latestObj) || 1;
                     }
                     if (newItem.inReview && !existing.inReview && !existing.done) {
                       existing.inReview = true;
-                      existing.reviewDay = existing.reviewDay || latestObj.currentDay || 1;
+                      existing.reviewDay = existing.reviewDay || getSprintCurrentDay(latestObj) || 1;
                     }
 
                     // Sincroniza as Flags (Merge sem duplicados)
@@ -2491,7 +2597,7 @@
                     updated++;
                   } else {
                     // Novo US ID detetado: Adiciona!
-                    if (newItem.done) newItem.doneDay = latestObj.currentDay || 1;
+                    if (newItem.done) newItem.doneDay = getSprintCurrentDay(latestObj) || 1;
                     latestObj.items.push(newItem);
                     added++;
                   }
