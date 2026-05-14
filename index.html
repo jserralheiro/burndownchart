@@ -952,7 +952,7 @@
         </svg>
       </div>
       <div>
-        <div class="topbar h1" style="font-size:1rem;font-weight:700;">Sprint Burndown Chart</div>
+        <h1 class="topbar-title" style="font-size:1rem;font-weight:700;margin:0;">Sprint Burndown Chart</h1>
       </div>
     </div>
     <div class="sprint-switcher">
@@ -1016,7 +1016,7 @@
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
           <div class="card-title" style="margin-bottom:0; transform: translateY(-4px);">⚙ Configuração</div>
           <div class="tabs" style="margin-bottom:0; width:auto;">
-            <button class="tab active" id="tab-sprint" onclick="showTab('sprint', true)">Sprint Atual</button>
+            <button class="tab active" id="tab-sprint" onclick="showTab('sprint', true)">Sprint</button>
             <button class="tab" id="tab-db" onclick="showTab('db')">Histórico</button>
           </div>
         </div>
@@ -1158,7 +1158,7 @@
       <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <div class="card-title" style="margin-bottom: 0;">📉 Burndown — <span id="sprintLabel">—</span></div>
-          <select id="devFilter" class="sprint-select dev-filter-select" onchange="filterByDev(this.value)"
+          <select id="devFilterMain" class="sprint-select dev-filter-select" onchange="filterByDev(this.value)"
             style="min-width: 140px; padding: 6px 10px; font-size: .75rem; border-radius: 6px;">
             <option value="all">Todos os Devs</option>
           </select>
@@ -1180,10 +1180,6 @@
       <div class="card" style="margin-top: 24px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
           <div class="card-title" style="margin-bottom: 0;">🔍 Dev Complete (In Review) — <span id="reviewSprintLabel">—</span></div>
-          <select id="devFilter2" class="sprint-select dev-filter-select" onchange="filterByDev(this.value)"
-            style="min-width: 140px; padding: 6px 10px; font-size: .75rem; border-radius: 6px;">
-            <option value="all">Todos os Devs</option>
-          </select>
         </div>
         <div class="chart-wrap">
           <canvas id="reviewBurndownChart"></canvas>
@@ -1265,6 +1261,9 @@
     // Separa a base de dados Local da Oficial de Produção
     const DB_KEY = IS_DEV ? 'burndown_db_dev' : 'burndown_db';
     const BIN_ID = IS_DEV ? '69e69213aaba8821971d5604' : '69d3d50daaba882197cd3fbd';
+    // ⚠️ SECURITY WARNING: This API key is exposed in client-side code and visible in the page source.
+    // Anyone who views the source can read, modify or delete ALL cloud data.
+    // To properly secure this, move the key to a server-side proxy (e.g., proxy.py) and never ship it in the HTML.
     const API_KEY = '$2a$10$b1zk.UlxUmhefLmBtQ66DOhVPYpHQN6tYqtixNMQrAJGBDCWlYxey';
     let cloudPushInFlight = false;
     let cloudPushPending = false;
@@ -1463,15 +1462,19 @@
 
     // Conta dias úteis (seg-sex) entre duas datas (inclusive)
     function countBusinessDays(start, end) {
+      if (!start || !end) return 0;
       let count = 0;
       const d = new Date(start);
       const e = new Date(end);
+      d.setHours(0, 0, 0, 0);
+      e.setHours(0, 0, 0, 0);
+      if (d > e) return 0; // Data início > fim: inválido
       while (d <= e) {
         const dow = d.getDay();
         if (dow !== 0 && dow !== 6) count++;
         d.setDate(d.getDate() + 1);
       }
-      return count;
+      return Math.max(0, count);
     }
 
     // Calcula o dia atual do sprint baseado nas datas
@@ -1641,7 +1644,7 @@
           const div = document.createElement('div');
           div.className = 'sprint-item' + (s.id === db.activeSprint ? ' active' : '');
           div.innerHTML = `
-          <div class="sprint-item-info" onclick="switchSprint('${s.id}'); showTab('sprint'); document.getElementById('tab-sprint').classList.remove('active');" style="cursor:pointer">
+          <div class="sprint-item-info" onclick="switchSprint('${s.id}'); showTab('sprint');" style="cursor:pointer">
             <div class="sprint-item-name">${escHtml(s.name)}</div>
             <div class="sprint-item-meta">${getSprintDays(s)} dias · ${total} SP · ${s.startDate ? new Date(s.startDate).toLocaleDateString('pt-PT') + ' → ' + new Date(s.endDate).toLocaleDateString('pt-PT') : 'criado ' + date}</div>
           </div>
@@ -1683,6 +1686,15 @@
     // ──────────────────────────────────────────────────────────────
     //  Config
     // ──────────────────────────────────────────────────────────────
+    // Returns true if the given sprint is the "current" one (today is within its date range)
+    function isCurrentSprint(sprint) {
+      if (!sprint.startDate || !sprint.endDate) return false;
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const start = new Date(sprint.startDate); start.setHours(0, 0, 0, 0);
+      const end = new Date(sprint.endDate); end.setHours(0, 0, 0, 0);
+      return today >= start && today <= end;
+    }
+
     function loadSprintForm() {
       const s = getActive(db);
       if (!s) return;
@@ -1695,6 +1707,11 @@
       document.getElementById('sprintLabel').textContent = s.name;
       const rLabel = document.getElementById('reviewSprintLabel');
       if (rLabel) rLabel.textContent = s.name;
+
+      // Update the sprint tab label: "Sprint Atual" only when today is within the sprint's dates
+      const tabEl = document.getElementById('tab-sprint');
+      if (tabEl) tabEl.textContent = isCurrentSprint(s) ? 'Sprint Atual' : 'Sprint';
+
       disableEditMode();
     }
 
@@ -1721,9 +1738,15 @@
       const startDate = document.getElementById('sprintStartDate').value;
       const endDate = document.getElementById('sprintEndDate').value;
       if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        if (start > end) {
+          alert('Data de início não pode ser posterior à data de fim!');
+          return;
+        }
         s.startDate = startDate;
         s.endDate = endDate;
-        s.days = countBusinessDays(new Date(startDate), new Date(endDate));
+        s.days = countBusinessDays(start, end);
         s.currentDay = getSprintCurrentDay(s);
       }
       const curDay = getSprintCurrentDay(s);
@@ -1956,11 +1979,14 @@
       const currentSprint = getActive(db);
       if (!currentSprint) return false;
 
-      const currentIdNum = Number(currentSprint.id);
+      // Compare by createdAt (ISO string) — safer than numeric ID comparison
+      // which can break when IDs come from backups or different machines.
+      const currentCreatedAt = currentSprint.createdAt || '';
 
       for (const sprint of db.sprints) {
-        const sprintIdNum = Number(sprint.id);
-        if (sprintIdNum < currentIdNum) {
+        if (sprint.id === currentSprint.id) continue; // skip the active sprint itself
+        const sprintCreatedAt = sprint.createdAt || '';
+        if (sprintCreatedAt < currentCreatedAt) {
           if (sprint.items.some(i => i.name === item.name)) {
             return true;
           }
@@ -1998,17 +2024,25 @@
     function saveComment() {
       if (!commentItemId) return;
       const s = getActive(db);
-      const item = s.items.find(i => i.id === commentItemId);
-      if (item) {
-        item.comment = document.getElementById('itemComment').value;
-
-        // Collect active flags
-        item.flags = FLAG_DEFS
-          .filter(f => document.getElementById(f.elId).checked)
-          .map(f => f.key);
-
-        saveDB();
+      if (!s) {
+        console.error('Sprint não encontrado');
+        closeCommentModal();
+        return;
       }
+      const item = s.items.find(i => i.id === commentItemId);
+      if (!item) {
+        console.error('Item não encontrado para comentário');
+        closeCommentModal();
+        return;
+      }
+      item.comment = document.getElementById('itemComment').value;
+
+      // Collect active flags
+      item.flags = FLAG_DEFS
+        .filter(f => document.getElementById(f.elId).checked)
+        .map(f => f.key);
+
+      saveDB();
       closeCommentModal();
     }
 
@@ -2098,21 +2132,23 @@
         list.insertBefore(card, empty);
       });
 
-      // Pagination footer
-      const pag = document.createElement('div');
-      pag.className = 'items-pagination';
+      // Pagination footer — only show when there is more than one page
+      if (pages > 1) {
+        const pag = document.createElement('div');
+        pag.className = 'items-pagination';
 
-      // Page buttons
-      let btns = '';
-      for (let p = 1; p <= pages; p++) {
-        btns += `<button class="page-btn${p === currentPage ? ' active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+        // Page buttons
+        let btns = '';
+        for (let p = 1; p <= pages; p++) {
+          btns += `<button class="page-btn${p === currentPage ? ' active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+        }
+
+        pag.innerHTML = `
+          <span>A mostrar ${start + 1}–${end} de ${total} itens</span>
+          <div class="page-btns">${btns}</div>
+        `;
+        list.insertBefore(pag, empty);
       }
-
-      pag.innerHTML = `
-        <span>A mostrar ${start + 1}–${end} de ${total} itens</span>
-        <div class="page-btns">${btns}</div>
-      `;
-      list.insertBefore(pag, empty);
     }
 
     function goToPage(p) {
@@ -2281,8 +2317,10 @@
         }
       }
 
-      // Update progress bar
-      const burnedNow = total - (actual[curDay] || 0);
+      // Update progress bar — clamp curDay to valid array bounds to avoid undefined
+      const safeDay = Math.min(curDay, actual.length - 1);
+      const actualAtDay = (safeDay >= 0 && actual[safeDay] != null) ? actual[safeDay] : total;
+      const burnedNow = total - actualAtDay;
       const pct = total ? Math.round(burnedNow / total * 100) : 0;
       document.getElementById('reviewProgressPct').textContent = pct + '%';
       document.getElementById('reviewProgressFill').style.width = pct + '%';
@@ -2374,6 +2412,17 @@
       const name = document.getElementById('newSprintName').value.trim() || `Sprint ${db.sprints.length + 1}`;
       const startDate = document.getElementById('newSprintStartDate').value || null;
       const endDate = document.getElementById('newSprintEndDate').value || null;
+      
+      // Validar datas se ambas estão preenchidas
+      if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        if (start > end) {
+          alert('Data de início não pode ser posterior à data de fim!');
+          return;
+        }
+      }
+      
       const s = newSprintObj(name, startDate, endDate);
 
       closeModal();
@@ -2424,49 +2473,33 @@
       const sprint = getActive(db);
       if (!sprint || sprint.items.length === 0) return alert('Não há tarefas no sprint atual para exportar.');
 
-      // UTF-8 BOM so Excel automatically recognizes characters like á, ç, etc.
-      let csv = '\uFEFF';
-      // ';' delimiter for Excel PT
-      csv += 'US ID;US Name;Dev;SP;Status;Done Day;Done At;Em Review;Review Day;Reviewed At;Flags;Spillover;Notas\n';
+      // Build rows array for SheetJS
+      const headers = ['US ID', 'US Name', 'Dev', 'SP', 'Status', 'Done Day', 'Done At', 'Em Review', 'Review Day', 'Reviewed At', 'Flags', 'Spillover', 'Notas'];
+      const rows = [headers];
 
       sprint.items.forEach(item => {
-        const estado = item.done ? 'Concluído' : 'Aberto';
-        const emReview = item.inReview ? 'Sim' : 'Não';
-        const doneDay = item.doneDay ? item.doneDay : '';
-        const doneAt = item.doneAt || '';
-        const reviewDay = item.reviewDay ? item.reviewDay : '';
-        const reviewedAt = item.reviewedAt || '';
-        const flags = (item.flags || []).join(', ');
-        const spillover = isSpillover(item) ? 'Sim' : 'Não';
-
-        // Escape fields to avoid delimiter collisions
-        const escapeField = (f) => {
-          if (!f) return '""';
-          return `"${String(f).replace(/"/g, '""')}"`;
-        };
-
-        csv += [
-          escapeField(item.name),
-          escapeField(item.usName),
-          escapeField(item.dev),
+        rows.push([
+          item.name || '',
+          item.usName || '',
+          item.dev || '',
           item.pts,
-          estado,
-          doneDay,
-          escapeField(doneAt),
-          emReview,
-          reviewDay,
-          escapeField(reviewedAt),
-          escapeField(flags),
-          spillover,
-          escapeField(item.comment)
-        ].join(';') + '\n';
+          item.done ? 'Concluído' : 'Aberto',
+          item.doneDay != null ? item.doneDay : '',
+          item.doneAt || '',
+          item.inReview ? 'Sim' : 'Não',
+          item.reviewDay != null ? item.reviewDay : '',
+          item.reviewedAt || '',
+          (item.flags || []).join(', '),
+          isSpillover(item) ? 'Sim' : 'Não',
+          item.comment || ''
+        ]);
       });
 
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `sprint_${sprint.id}_export.csv`;
-      a.click();
+      // Use SheetJS (XLSX) to generate a real .xlsx file
+      const worksheet = XLSX.utils.aoa_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, sprint.name || 'Sprint');
+      XLSX.writeFile(workbook, `sprint_${sprint.id}_export.xlsx`);
     }
 
     async function importDataExcel(event) {
@@ -2620,6 +2653,7 @@
     }
     function pulse(id) {
       const el = document.getElementById(id);
+      if (!el) return; // Guard: element may not exist
       el.style.transform = 'scale(0.95)'; setTimeout(() => el.style.transform = '', 160);
     }
 
