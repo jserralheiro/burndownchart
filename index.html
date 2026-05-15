@@ -11,6 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <script src="config.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -1303,11 +1304,8 @@
 
     // Separa a base de dados Local da Oficial de Produção
     const DB_KEY = IS_DEV ? 'burndown_db_dev' : 'burndown_db';
-    const BIN_ID = IS_DEV ? '69e69213aaba8821971d5604' : '69d3d50daaba882197cd3fbd';
-    // ⚠️ SECURITY WARNING: This API key is exposed in client-side code and visible in the page source.
-    // Anyone who views the source can read, modify or delete ALL cloud data.
-    // To properly secure this, move the key to a server-side proxy (e.g., proxy.py) and never ship it in the HTML.
-    const API_KEY = '$2a$10$b1zk.UlxUmhefLmBtQ66DOhVPYpHQN6tYqtixNMQrAJGBDCWlYxey';
+    const BIN_ID = IS_DEV ? CONFIG.BIN_ID_DEV : CONFIG.BIN_ID_PROD;
+    const API_KEY = CONFIG.API_KEY;
     let cloudPushInFlight = false;
     let cloudPushPending = false;
     let bootComplete = false;
