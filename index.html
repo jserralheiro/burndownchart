@@ -10,6 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
     rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -108,12 +109,12 @@
       font-family: inherit;
       font-size: .85rem;
       font-weight: 600;
-      padding: 8px 36px 8px 14px;
+      padding: 6px 32px 6px 12px;
       outline: none;
       cursor: pointer;
       appearance: none;
       -webkit-appearance: none;
-      min-width: 160px;
+      min-width: 140px;
       transition: border-color .2s;
     }
 
@@ -146,7 +147,7 @@
     }
 
     .btn-primary {
-      background: linear-gradient(135deg, var(--accent), #4f46e5);
+      background: var(--accent);
       color: #fff;
     }
 
@@ -163,6 +164,11 @@
 
     .btn-ghost:hover {
       color: var(--text);
+      border-color: var(--accent);
+    }
+
+    .btn-ghost.active {
+      color: var(--accent);
       border-color: var(--accent);
     }
 
@@ -859,13 +865,11 @@
       background: var(--surface2);
       border-radius: 10px;
       padding: 4px;
-      margin-bottom: 18px;
     }
 
     .tab {
-      flex: 1;
       text-align: center;
-      padding: 7px 10px;
+      padding: 7px 16px;
       border-radius: 7px;
       font-size: .8rem;
       font-weight: 600;
@@ -880,6 +884,36 @@
     .tab.active {
       background: var(--surface3);
       color: var(--text);
+    }
+
+    /* ── Sub-nav ── */
+    .subnav {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px;
+      display: flex;
+      gap: 4px;
+    }
+
+    .subnav-tab {
+      padding: 11px 18px;
+      font-size: .82rem;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border: none;
+      border-bottom: 2px solid transparent;
+      background: none;
+      font-family: inherit;
+      margin-bottom: -1px;
+      transition: color .2s, border-color .2s;
+    }
+
+    .subnav-tab:hover { color: var(--text); }
+
+    .subnav-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
     }
 
     /* ── Global Spinner ── */
@@ -963,34 +997,37 @@
           <polyline points="6 9 12 15 18 9" />
         </svg>
       </div>
+      <button class="btn btn-ghost btn-sm" id="tab-db" onclick="showTab(this.classList.contains('active') ? 'sprint' : 'db')">
+        <i class="ti ti-history"></i>
+        Histórico
+      </button>
       <button class="btn btn-primary btn-sm" onclick="openNewSprintModal()">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <line x1="12" y1="5" x2="12" y2="19" />
           <line x1="5" y1="12" x2="19" y2="12" />
         </svg>
-        Novo Sprint
-      </button>
-      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('importExcelInput').click()">
-        📂 Importar
+        Criar Sprint
       </button>
         <input type="file" id="importExcelInput"
           accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
           style="display:none" onchange="importDataExcel(event)" />
         <div class="dropdown-wrapper">
           <button class="btn btn-ghost btn-sm" onclick="toggleExportMenu(event)">
-            📥 Exportar
+            <i class="ti ti-folder"></i>
+            Ficheiros
+            <i class="ti ti-chevron-down" style="font-size:13px;"></i>
           </button>
           <div class="dropdown-menu" id="exportMenu">
-            <button class="dropdown-item" onclick="exportDataJson()">
+            <button class="dropdown-item" onclick="document.getElementById('importExcelInput').click()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round">
-                <polyline points="16 16 12 20 8 16"></polyline>
-                <line x1="12" y1="12" x2="12" y2="20"></line>
+                <polyline points="16 8 12 4 8 8"></polyline>
+                <line x1="12" y1="4" x2="12" y2="16"></line>
                 <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
-                <polyline points="16 16 12 20 8 16"></polyline>
               </svg>
-              Exportar para JSON
+              Importar Excel/CSV
             </button>
+            <div style="height:1px; background:var(--border); margin:2px 0;"></div>
             <button class="dropdown-item" onclick="exportDataExcel()">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round">
@@ -1002,6 +1039,15 @@
               </svg>
               Exportar para Excel
             </button>
+            <button class="dropdown-item" onclick="backupDB()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round">
+                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+              </svg>
+              Backup DB
+            </button>
           </div>
         </div>
     </div>
@@ -1011,15 +1057,12 @@
   <div class="page">
     <div class="layout">
 
+      <!-- ── Sprint Panel ── -->
+      <div id="panel-sprint">
+
       <!-- ── 1. Config Strip ── -->
       <div class="card">
-        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-          <div class="card-title" style="margin-bottom:0; transform: translateY(-4px);">⚙ Configuração</div>
-          <div class="tabs" style="margin-bottom:0; width:auto;">
-            <button class="tab active" id="tab-sprint" onclick="showTab('sprint', true)">Sprint</button>
-            <button class="tab" id="tab-db" onclick="showTab('db')">Histórico</button>
-          </div>
-        </div>
+        <div class="card-title">⚙ Configuração</div>
         <div class="config-strip">
           <div>
             <label for="sprintName">Nome do Sprint</label>
@@ -1059,8 +1102,7 @@
           </div>
         </div>
       </div>
-      <!-- ── 2. Items Table (visible in Sprint Atual tab) ── -->
-      <div id="panel-sprint">
+      <!-- ── 2. Items Table ── -->
         <div class="card">
           <div class="card-title">📋 Itens do Sprint</div>
 
@@ -1085,7 +1127,7 @@
             <div>
               <label>&nbsp;</label>
               <button class="btn btn-primary btn-sm" id="addItemBtn" onclick="addItem()"
-                style="height:36px; white-space:nowrap;">+Add</button>
+                style="height:36px; white-space:nowrap;">+ Add</button>
             </div>
           </div>
 
@@ -1115,17 +1157,8 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- ── 3. History Tab ── -->
-      <div id="panel-db" style="display:none;">
-        <div class="card">
-          <div class="card-title">🗂 Todos os Sprints</div>
-          <div class="sprint-list" id="sprintList"></div>
-        </div>
-      </div>
-
-      <!-- ── 4. Stats + Chart ── -->
+      <!-- ── 3. Stats + Chart ── -->
       <div class="stats">
         <div class="stat">
           <div class="stat-label">Total SP</div>
@@ -1192,6 +1225,16 @@
           <div class="progress-track">
             <div class="progress-fill" id="reviewProgressFill" style="width:0%; background: linear-gradient(90deg, #8b5cf6, #a78bfa);"></div>
           </div>
+        </div>
+      </div>
+
+      </div><!-- /panel-sprint -->
+
+      <!-- ── History Tab ── -->
+      <div id="panel-db" style="display:none;">
+        <div class="card">
+          <div class="card-title">🗂 Todos os Sprints</div>
+          <div class="sprint-list" id="sprintList"></div>
         </div>
       </div>
 
@@ -1663,11 +1706,11 @@
     //  Tabs
     // ──────────────────────────────────────────────────────────────
     function showTab(t, autoSelect) {
-      document.getElementById('panel-sprint').style.display = t === 'sprint' ? '' : 'none';
-      document.getElementById('panel-db').style.display = t === 'db' ? '' : 'none';
-      document.getElementById('tab-sprint').classList.toggle('active', t === 'sprint');
-      document.getElementById('tab-db').classList.toggle('active', t === 'db');
-      if (t === 'db') populateSprintList();
+      const isSprint = t === 'sprint';
+      document.getElementById('panel-sprint').style.display = isSprint ? '' : 'none';
+      document.getElementById('panel-db').style.display = isSprint ? 'none' : '';
+      document.getElementById('tab-db').classList.toggle('active', !isSprint);
+      if (!isSprint) populateSprintList();
       if (t === 'sprint' && autoSelect) {
         // Auto-selecionar o sprint cuja data inclui hoje
         const today = new Date(); today.setHours(0,0,0,0);
@@ -1708,9 +1751,6 @@
       const rLabel = document.getElementById('reviewSprintLabel');
       if (rLabel) rLabel.textContent = s.name;
 
-      // Update the sprint tab label: "Sprint Atual" only when today is within the sprint's dates
-      const tabEl = document.getElementById('tab-sprint');
-      if (tabEl) tabEl.textContent = isCurrentSprint(s) ? 'Sprint Atual' : 'Sprint';
 
       disableEditMode();
     }
@@ -2460,12 +2500,19 @@
       menu.classList.toggle('open');
     }
 
-    function exportDataJson() {
-      if (!db || !db.sprints) return alert('Não há dados para exportar.');
+    function backupDB() {
+      if (!db || !db.sprints) return alert('Não há dados para fazer backup.');
+      const now = new Date();
+      const dateStr = now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0');
+      const timeStr = String(now.getHours()).padStart(2, '0') + '-' +
+        String(now.getMinutes()).padStart(2, '0') + '-' +
+        String(now.getSeconds()).padStart(2, '0');
       const blob = new Blob([JSON.stringify(db, null, 2)], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'data.json';
+      a.download = `burndown_backup_${dateStr}_${timeStr}.json`;
       a.click();
     }
 
