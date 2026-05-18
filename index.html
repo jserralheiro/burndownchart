@@ -1422,7 +1422,10 @@
           if (!localItem) {
             // Item só existe na Cloud — verificar se foi eliminado localmente
             const deletedNames = localSprint.deletedNames || [];
-            if (deletedNames.includes(cloudName)) return; // Foi apagado de propósito, ignorar
+            const deletedIds = localSprint.deletedIds || [];
+            // Verificar por ID (cobre renomes: item renomeado depois apagado)
+            if (cloudItem.id && deletedIds.includes(cloudItem.id)) return;
+            if (deletedNames.includes(cloudName)) return;
             // Colega adicionou → adicionar localmente
             localSprint.items.push(cloudItem);
           } else {
@@ -1574,10 +1577,17 @@
               cloudDB = JSON.parse(LZString.decompressFromBase64(cloudDB.compressed_db));
             }
             const currentActive = db ? db.activeSprint : null;
-            db = initDB(cloudDB);
+            if (needsSpinner) {
+              // Local vazio — sem alterações a preservar, substituir diretamente
+              db = initDB(cloudDB);
+            } else {
+              // Local tem dados reais — merge para não perder interações durante o fetch
+              mergeFromCloud(cloudDB);
+            }
             if (currentActive && db.sprints.some(s => s.id === currentActive)) {
               db.activeSprint = currentActive;
             }
+            localStorage.setItem(DB_KEY, JSON.stringify(db));
             refreshAll();
           }
         })
@@ -1923,6 +1933,7 @@
 
     function toggleItem(id) {
       const s = getActive(db);
+      if (!s) return;
       const item = s.items.find(i => i.id === id);
       if (!item) return;
       item.done = !item.done;
@@ -1935,6 +1946,7 @@
 
     function toggleInReview(id) {
       const s = getActive(db);
+      if (!s) return;
       const item = s.items.find(i => i.id === id);
       if (!item) return;
       
@@ -1970,12 +1982,12 @@
         if (s) {
           const item = s.items.find(i => i.id === id);
           if (item) {
-            // Registar o nome normalizado para que o merge não o ressuscite
+            // Registar nome e id para que o merge não o ressuscite (cobre renomes)
             if (!s.deletedNames) s.deletedNames = [];
             const normalizedName = String(item.name).trim().toLowerCase();
-            if (!s.deletedNames.includes(normalizedName)) {
-              s.deletedNames.push(normalizedName);
-            }
+            if (!s.deletedNames.includes(normalizedName)) s.deletedNames.push(normalizedName);
+            if (!s.deletedIds) s.deletedIds = [];
+            if (item.id && !s.deletedIds.includes(item.id)) s.deletedIds.push(item.id);
           }
           s.items = s.items.filter(i => i.id !== id);
         }
@@ -2028,6 +2040,7 @@
 
     function openCommentModal(id) {
       const s = getActive(db);
+      if (!s) return;
       const item = s.items.find(i => i.id === id);
       if (!item) return;
 
