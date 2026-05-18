@@ -24,6 +24,7 @@
       --border: #ffffff14;
       --accent: #6c63ff;
       --accent2: #00d4aa;
+      --accent-review: #a78bfa;
       --danger: #ff5c7a;
       --warn: #f5a623;
       --text: #e8eaf6;
@@ -542,6 +543,8 @@
 
     /* .item-name sizing handled above */
 
+    .item-meta { font-size: .85rem; }
+
     .item-pts {
       font-size: .73rem;
       background: #ffffff0d;
@@ -551,7 +554,15 @@
       color: var(--accent);
       font-weight: 600;
       white-space: nowrap;
+      text-align: center;
     }
+
+    .item-actions { display: flex; gap: 2px; align-items: center; }
+    .item-del.has-comment { color: var(--accent); }
+    .checkbox-wrap.disabled { cursor: default; opacity: 0.5; }
+    .inline-input--id { font-weight: 600; font-size: .88rem; }
+    .inline-input--center { text-align: center; }
+    .item-del--save { color: var(--accent2); }
 
     .item-day-tag {
       font-size: .7rem;
@@ -575,6 +586,8 @@
     .item-del:hover {
       color: var(--danger);
     }
+
+    .item-del i { font-size: 13px; }
 
     .empty {
       text-align: center;
@@ -708,6 +721,10 @@
       background: linear-gradient(90deg, var(--accent), var(--accent2));
       border-radius: 10px;
       transition: width .5s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    .progress-fill.review {
+      background: linear-gradient(90deg, var(--accent), var(--accent-review));
     }
 
     /* ── Sprint DB sidebar ── */
@@ -963,10 +980,10 @@
     /* ── In Review Feature ── */
     
     .item-del.review-active {
-      color: #a78bfa;
+      color: var(--accent-review);
     }
     .item-del.review-active:hover {
-      color: #8b5cf6;
+      color: var(--accent);
     }
   </style>
 </head>
@@ -1003,10 +1020,7 @@
         Histórico
       </button>
       <button class="btn btn-primary btn-sm" onclick="openNewSprintModal()">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <line x1="12" y1="5" x2="12" y2="19" />
-          <line x1="5" y1="12" x2="19" y2="12" />
-        </svg>
+        <i class="ti ti-plus"></i>
         Criar Sprint
       </button>
         <input type="file" id="importExcelInput"
@@ -1020,33 +1034,16 @@
           </button>
           <div class="dropdown-menu" id="exportMenu">
             <button class="dropdown-item" onclick="document.getElementById('importExcelInput').click()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round">
-                <polyline points="16 8 12 4 8 8"></polyline>
-                <line x1="12" y1="4" x2="12" y2="16"></line>
-                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
-              </svg>
+              <i class="ti ti-cloud-upload"></i>
               Importar Excel/CSV
             </button>
             <div style="height:1px; background:var(--border); margin:2px 0;"></div>
             <button class="dropdown-item" onclick="exportDataExcel()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-                <line x1="8" y1="13" x2="16" y2="13"></line>
-                <line x1="8" y1="17" x2="16" y2="17"></line>
-                <polyline points="10 9 9 9 8 9"></polyline>
-              </svg>
+              <i class="ti ti-file-spreadsheet"></i>
               Exportar para Excel
             </button>
             <button class="dropdown-item" onclick="backupDB()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round">
-                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
-                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
-                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
-              </svg>
+              <i class="ti ti-database"></i>
               Backup DB
             </button>
           </div>
@@ -1081,23 +1078,13 @@
             <label>Dia Atual</label>
             <span id="computedDayDisplay" style="display:block;font-size:.88rem;color:var(--text);padding:9px 0;font-weight:500">—</span>
           </div>
-          <div>
-            <label>&nbsp;</label>
-            <button class="btn btn-ghost btn-sm" onclick="enableEditMode()" id="editBtn"
-              style="transform: translateY(-4px);">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                stroke-linecap="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-              </svg>
+          <div style="display:flex; align-items:flex-end; gap:8px; padding-bottom:1px;">
+            <button class="btn btn-ghost btn-sm" onclick="enableEditMode()" id="editBtn">
+              <i class="ti ti-pencil"></i>
               Editar
             </button>
-            <button class="btn btn-primary btn-sm" onclick="applyConfig()" id="applyBtn"
-              style="transform: translateY(-4px); display: none;">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
-                stroke-linecap="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
+            <button class="btn btn-primary btn-sm" onclick="applyConfig()" id="applyBtn" style="display:none;">
+              <i class="ti ti-check"></i>
               Guardar
             </button>
           </div>
@@ -1224,7 +1211,7 @@
             <span id="reviewProgressPct">0%</span>
           </div>
           <div class="progress-track">
-            <div class="progress-fill" id="reviewProgressFill" style="width:0%; background: linear-gradient(90deg, #8b5cf6, #a78bfa);"></div>
+            <div class="progress-fill review" id="reviewProgressFill" style="width:0%;"></div>
           </div>
         </div>
       </div>
@@ -1421,8 +1408,14 @@
 
         // Fundir itens dentro do mesmo Sprint
         cloudSprint.items.forEach(cloudItem => {
+          // Procurar primeiro por id (estável — sobrevive a renomes)
+          const localItemById = cloudItem.id
+            ? localSprint.items.find(i => i.id === cloudItem.id)
+            : null;
+
           const cloudName = String(cloudItem.name).trim().toLowerCase();
-          const localItem = localSprint.items.find(i =>
+          // Fallback: procurar por nome (para itens sem id correspondente)
+          const localItem = localItemById || localSprint.items.find(i =>
             String(i.name).trim().toLowerCase() === cloudName
           );
 
@@ -1692,7 +1685,7 @@
           ${pct === 100 ? '<span class="sprint-item-badge">✓ Concluído</span>' : `<span style="font-size:.75rem;color:var(--muted);margin-left:8px;">${pct}%</span>`}
           <div class="sprint-item-actions">
             <button class="icon-btn delete" onclick="deleteSprint('${s.id}')" title="Eliminar sprint">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              <i class="ti ti-trash"></i>
             </button>
           </div>
         `;
@@ -2008,7 +2001,7 @@
         const def = FLAG_DEFS.find(d => d.key === f);
         return def ? def.label : f;
       }).join('<br>');
-      return `<span class="flag-dot-wrap"><svg width="13" height="13" viewBox="0 0 24 24" fill="#ef4444" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg><span class="flag-tooltip">${labels}</span></span>`;
+      return `<span class="flag-dot-wrap"><i class="ti ti-flag" style="color:var(--danger);font-size:13px;"></i><span class="flag-tooltip">${labels}</span></span>`;
     }
 
     function isSpillover(item) {
@@ -2125,19 +2118,19 @@
         const card = document.createElement('div');
         card.className = 'item-card' + (item.done ? ' done' : '');
         card.innerHTML = (editingItemId === item.id) ? `
-          <div class="checkbox-wrap ${item.done ? 'checked' : ''}" style="cursor:default; opacity:0.5;">
+          <div class="checkbox-wrap ${item.done ? 'checked' : ''} disabled">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
-          <input type="text" class="inline-input" id="edit-id-${item.id}" value="${escHtml(item.name)}" style="font-weight:600; font-size:.88rem;" />
-          <input type="text" class="inline-input" id="edit-us-${item.id}" value="${escHtml(item.usName || '')}" style="font-size:.85rem;" placeholder="US Name" />
-          <input type="text" class="inline-input" id="edit-dev-${item.id}" value="${escHtml(item.dev || '')}" style="font-size:.85rem;" placeholder="Dev" />
-          <input type="number" class="inline-input" id="edit-pts-${item.id}" value="${item.pts}" style="text-align:center;" min="0" />
-          <div style="display:flex; gap:2px;">
-            <button class="item-del" style="color:var(--accent2);" onclick="saveInlineEdit('${item.id}')" title="Guardar">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <input type="text" class="inline-input inline-input--id" id="edit-id-${item.id}" value="${escHtml(item.name)}" />
+          <input type="text" class="inline-input" id="edit-us-${item.id}" value="${escHtml(item.usName || '')}" placeholder="US Name" />
+          <input type="text" class="inline-input" id="edit-dev-${item.id}" value="${escHtml(item.dev || '')}" placeholder="Dev" />
+          <input type="number" class="inline-input inline-input--center" id="edit-pts-${item.id}" value="${item.pts}" min="0" />
+          <div class="item-actions">
+            <button class="item-del item-del--save" onclick="saveInlineEdit('${item.id}')" title="Guardar">
+              <i class="ti ti-check"></i>
             </button>
             <button class="item-del" onclick="cancelInlineEdit()" title="Cancelar">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <i class="ti ti-x"></i>
             </button>
           </div>
         ` : `
@@ -2148,21 +2141,21 @@
             <span>${escHtml(item.name)}</span>
             ${isSpillover(item) ? '<span class="spillover-wrap">⏪<span class="flag-tooltip">Spillover de sprint passado</span></span>' : ''}
           </span>
-          <span class="item-meta" style="font-size:.85rem;">${escHtml(item.usName || '—')}</span>
-          <span class="item-meta" style="font-size:.85rem;">${escHtml(item.dev || '—')}</span>
-          <span class="item-pts" style="text-align:center;">${item.pts} SP</span>
-          <div style="display:flex; gap:2px; align-items:center;">
+          <span class="item-meta">${escHtml(item.usName || '—')}</span>
+          <span class="item-meta">${escHtml(item.dev || '—')}</span>
+          <span class="item-pts">${item.pts} SP</span>
+          <div class="item-actions">
             <button class="item-del ${item.inReview ? 'review-active' : ''}" onclick="toggleInReview('${item.id}')" title="${item.inReview ? 'Em Review' : 'Marcar Em Review'}">
-              <svg width="${item.inReview ? '15' : '14'}" height="${item.inReview ? '15' : '14'}" viewBox="0 0 24 24" fill="${item.inReview ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="${item.inReview ? '3' : '2.5'}" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <i class="ti ti-search"></i>
             </button>
-            <button class="item-del" style="${item.comment ? 'color: var(--accent);' : ''}" onclick="openCommentModal('${item.id}')" title="Comentários">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="${item.comment ? 'var(--accent)' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <button class="item-del ${item.comment ? 'has-comment' : ''}" onclick="openCommentModal('${item.id}')" title="Comentários">
+              <i class="ti ti-message"></i>
             </button>
             <button class="item-del" onclick="editItem('${item.id}')" title="Editar">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              <i class="ti ti-pencil"></i>
             </button>
             <button class="item-del" onclick="deleteItem('${item.id}')" title="Apagar">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <i class="ti ti-x"></i>
             </button>
             ${getFlagDotHtml(item)}
           </div>
@@ -2222,6 +2215,30 @@
     // ──────────────────────────────────────────────────────────────
     //  Chart
     // ──────────────────────────────────────────────────────────────
+    function getChartColors() {
+      const s = getComputedStyle(document.documentElement);
+      const get = v => s.getPropertyValue(v).trim();
+      const accent  = get('--accent');
+      const accent2 = get('--accent2');
+      const review  = get('--accent-review');
+      const danger  = get('--danger');
+      return {
+        accent, accent2, review, danger,
+        accentFill:   accent  + '44',
+        accentFade:   accent  + '00',
+        reviewFill:   review  + '66',
+        reviewFade:   review  + '00',
+        accent2Line:  accent2 + 'cc',
+        muted:        get('--muted'),
+        text:         get('--text'),
+        surface:      get('--surface'),
+        surface2:     get('--surface2'),
+        border:       get('--border'),
+        grid:         '#ffffff08',
+        gridLight:    '#ffffff0a',
+      };
+    }
+
     function renderChart() {
       const s = getActive(db);
       const days = s ? getSprintDays(s) : 10;
@@ -2250,14 +2267,14 @@
       }
 
       const ctx = document.getElementById('burndownChart').getContext('2d');
-      // Safely destroy any existing chart on this canvas (Chart.js v4)
       const existing = Chart.getChart('burndownChart');
       if (existing) existing.destroy();
       chart = null;
 
+      const c = getChartColors();
       const grad = ctx.createLinearGradient(0, 0, 0, 340);
-      grad.addColorStop(0, '#6c63ff44');
-      grad.addColorStop(1, '#6c63ff00');
+      grad.addColorStop(0, c.accentFill);
+      grad.addColorStop(1, c.accentFade);
 
       chart = new Chart(ctx, {
         type: 'line',
@@ -2267,7 +2284,7 @@
             {
               label: 'Linha Ideal',
               data: ideal,
-              borderColor: '#00d4aacc',
+              borderColor: c.accent2Line,
               borderWidth: 2,
               borderDash: [6, 4],
               pointRadius: 0,
@@ -2278,14 +2295,14 @@
             {
               label: 'Trabalho Restante',
               data: actual,
-              borderColor: '#6c63ff',
+              borderColor: c.accent,
               borderWidth: 3,
               pointBackgroundColor: actual.map((v, i) => {
                 if (v === null) return 'transparent';
                 const idealV = total - (total / days) * i;
-                return v > idealV ? '#ff5c7a' : '#00d4aa';
+                return v > idealV ? c.danger : c.accent2;
               }),
-              pointBorderColor: '#13162a',
+              pointBorderColor: c.surface,
               pointBorderWidth: 2,
               pointRadius: actual.map(v => v === null ? 0 : 5),
               pointHoverRadius: 8,
@@ -2302,11 +2319,11 @@
           interaction: { mode: 'index', intersect: false },
           plugins: {
             legend: {
-              labels: { color: '#8889aa', font: { family: 'Inter', size: 12 }, boxWidth: 18, padding: 18 }
+              labels: { color: c.muted, font: { family: 'Inter', size: 12 }, boxWidth: 18, padding: 18 }
             },
             tooltip: {
-              backgroundColor: '#1a1f38', borderColor: '#ffffff14', borderWidth: 1,
-              titleColor: '#e8eaf6', bodyColor: '#8889aa', padding: 12,
+              backgroundColor: c.surface2, borderColor: c.border, borderWidth: 1,
+              titleColor: c.text, bodyColor: c.muted, padding: 12,
               callbacks: {
                 label: c => ` ${c.dataset.label}: ${c.raw !== null ? c.raw + ' SP' : '—'}`
               }
@@ -2314,14 +2331,14 @@
           },
           scales: {
             x: {
-              grid: { color: '#ffffff08' },
-              ticks: { color: '#8889aa', font: { family: 'Inter', size: 11 }, maxRotation: 0 }
+              grid: { color: c.grid },
+              ticks: { color: c.muted, font: { family: 'Inter', size: 11 }, maxRotation: 0 }
             },
             y: {
               beginAtZero: true,
               suggestedMax: total > 0 ? Math.ceil(total * 1.1) : 10,
-              grid: { color: '#ffffff0a' },
-              ticks: { color: '#8889aa', font: { family: 'Inter', size: 11 }, callback: v => v + ' SP' }
+              grid: { color: c.gridLight },
+              ticks: { color: c.muted, font: { family: 'Inter', size: 11 }, callback: v => v + ' SP' }
             }
           }
         }
@@ -2368,9 +2385,10 @@
       if (existing) existing.destroy();
       reviewChart = null;
 
+      const c = getChartColors();
       const grad = ctx.createLinearGradient(0, 0, 0, 340);
-      grad.addColorStop(0, 'rgba(167, 139, 250, 0.4)');
-      grad.addColorStop(1, 'rgba(167, 139, 250, 0)');
+      grad.addColorStop(0, c.reviewFill);
+      grad.addColorStop(1, c.reviewFade);
 
       reviewChart = new Chart(ctx, {
         type: 'line',
@@ -2380,7 +2398,7 @@
             {
               label: 'Linha Ideal',
               data: ideal,
-              borderColor: '#00d4aacc',
+              borderColor: c.accent2Line,
               borderWidth: 2,
               borderDash: [6, 4],
               pointRadius: 0,
@@ -2391,14 +2409,14 @@
             {
               label: 'Aguarda Review',
               data: actual,
-              borderColor: '#a78bfa',
+              borderColor: c.review,
               borderWidth: 3,
               pointBackgroundColor: actual.map((v, i) => {
                 if (v === null) return 'transparent';
                 const idealV = total - (total / days) * i;
-                return v > idealV ? '#ff5c7a' : '#34d399';
+                return v > idealV ? c.danger : c.accent2;
               }),
-              pointBorderColor: '#13162a',
+              pointBorderColor: c.surface,
               pointBorderWidth: 2,
               pointRadius: actual.map(v => v === null ? 0 : 5),
               pointHoverRadius: 8,
@@ -2413,18 +2431,18 @@
           responsive: true, maintainAspectRatio: false,
           interaction: { mode: 'index', intersect: false },
           plugins: {
-            legend: { labels: { color: '#8889aa', font: { family: 'Inter', size: 12 }, boxWidth: 18, padding: 18 } },
+            legend: { labels: { color: c.muted, font: { family: 'Inter', size: 12 }, boxWidth: 18, padding: 18 } },
             tooltip: {
-              backgroundColor: '#1a1f38', borderColor: '#ffffff14', borderWidth: 1,
-              titleColor: '#e8eaf6', bodyColor: '#8889aa', padding: 12,
+              backgroundColor: c.surface2, borderColor: c.border, borderWidth: 1,
+              titleColor: c.text, bodyColor: c.muted, padding: 12,
               callbacks: { label: c => ` ${c.dataset.label}: ${c.raw !== null ? c.raw + ' SP' : '—'}` }
             }
           },
           scales: {
-            x: { grid: { color: '#ffffff08' }, ticks: { color: '#8889aa', font: { family: 'Inter', size: 11 }, maxRotation: 0 } },
+            x: { grid: { color: c.grid }, ticks: { color: c.muted, font: { family: 'Inter', size: 11 }, maxRotation: 0 } },
             y: {
               beginAtZero: true, suggestedMax: total > 0 ? Math.ceil(total * 1.1) : 10,
-              grid: { color: '#ffffff0a' }, ticks: { color: '#8889aa', font: { family: 'Inter', size: 11 }, callback: v => v + ' SP' }
+              grid: { color: c.gridLight }, ticks: { color: c.muted, font: { family: 'Inter', size: 11 }, callback: v => v + ' SP' }
             }
           }
         }
