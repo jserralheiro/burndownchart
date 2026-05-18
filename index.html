@@ -1610,9 +1610,9 @@
               }
               if (cloudDB.lastUpdated && (!db.lastUpdated || cloudDB.lastUpdated > db.lastUpdated)) {
                 const currentActive = db.activeSprint;
-                db = cloudDB;
+                mergeFromCloud(cloudDB);
                 if (currentActive && db.sprints.some(s => s.id === currentActive)) {
-                  db.activeSprint = currentActive; // Preserve local active sprint only if it exists
+                  db.activeSprint = currentActive;
                 }
                 localStorage.setItem(DB_KEY, JSON.stringify(db));
                 refreshAll();
