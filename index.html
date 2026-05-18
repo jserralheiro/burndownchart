@@ -2641,7 +2641,7 @@
             const isInReview = ['sim', 'true', '1', 'x', 'yes'].includes(rawReview);
 
             const item = {
-              id: Date.now().toString() + Math.floor(Math.random() * 10000),
+              id: crypto.randomUUID(),
               name: usId,
               usName: usName,
               dev: dev,
