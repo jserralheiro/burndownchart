@@ -26,7 +26,7 @@
       --accent2: #00d4aa;
       --accent-review: #a78bfa;
       --danger: #ff5c7a;
-      --warn: #f5a623;
+
       --text: #e8eaf6;
       --muted: #8889aa;
       --radius: 14px;
@@ -86,10 +86,6 @@
       font-weight: 700;
     }
 
-    .topbar-sub {
-      font-size: .73rem;
-      color: var(--muted);
-    }
 
     /* ── Sprint switcher ── */
     .sprint-switcher {
@@ -190,10 +186,6 @@
       border-radius: 6px;
     }
 
-    .btn-full {
-      width: 100%;
-      justify-content: center;
-    }
 
     /* ── Main layout ── */
     .page {
@@ -259,11 +251,6 @@
       margin-bottom: 16px;
     }
 
-    .sep {
-      height: 1px;
-      background: var(--border);
-      margin: 16px 0;
-    }
 
     /* ── Form ── */
     label {
@@ -564,15 +551,6 @@
     .inline-input--center { text-align: center; }
     .item-del--save { color: var(--accent2); }
 
-    .item-day-tag {
-      font-size: .7rem;
-      color: var(--muted);
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2px 8px;
-      white-space: nowrap;
-    }
 
     .item-del {
       background: none;
@@ -874,64 +852,6 @@
     ::-webkit-scrollbar-thumb {
       background: var(--border);
       border-radius: 10px;
-    }
-
-    /* ── Tabs ── */
-    .tabs {
-      display: flex;
-      gap: 4px;
-      background: var(--surface2);
-      border-radius: 10px;
-      padding: 4px;
-    }
-
-    .tab {
-      text-align: center;
-      padding: 7px 16px;
-      border-radius: 7px;
-      font-size: .8rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all .2s;
-      color: var(--muted);
-      border: none;
-      background: none;
-      font-family: inherit;
-    }
-
-    .tab.active {
-      background: var(--surface3);
-      color: var(--text);
-    }
-
-    /* ── Sub-nav ── */
-    .subnav {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 0 28px;
-      display: flex;
-      gap: 4px;
-    }
-
-    .subnav-tab {
-      padding: 11px 18px;
-      font-size: .82rem;
-      font-weight: 600;
-      color: var(--muted);
-      cursor: pointer;
-      border: none;
-      border-bottom: 2px solid transparent;
-      background: none;
-      font-family: inherit;
-      margin-bottom: -1px;
-      transition: color .2s, border-color .2s;
-    }
-
-    .subnav-tab:hover { color: var(--text); }
-
-    .subnav-tab.active {
-      color: var(--accent);
-      border-bottom-color: var(--accent);
     }
 
     /* ── Global Spinner ── */
@@ -1593,6 +1513,7 @@
             } else {
               // Local tem dados reais — merge para não perder interações durante o fetch
               mergeFromCloud(cloudDB);
+              db.lastUpdated = Math.max(db.lastUpdated || 0, cloudDB.lastUpdated || 0);
             }
             if (currentActive && db.sprints.some(s => s.id === currentActive)) {
               db.activeSprint = currentActive;
@@ -1673,6 +1594,7 @@
 
     function switchSprint(id) {
       db.activeSprint = id;
+      currentPage = 1;
       localStorage.setItem(DB_KEY, JSON.stringify(db));
       refreshAll();
     }
@@ -1700,7 +1622,7 @@
           div.innerHTML = `
           <div class="sprint-item-info" onclick="switchSprint('${s.id}'); showTab('sprint');" style="cursor:pointer">
             <div class="sprint-item-name">${escHtml(s.name)}</div>
-            <div class="sprint-item-meta">${getSprintDays(s)} dias · ${total} SP · ${s.startDate ? new Date(s.startDate).toLocaleDateString('pt-PT') + ' → ' + new Date(s.endDate).toLocaleDateString('pt-PT') : 'criado ' + date}</div>
+            <div class="sprint-item-meta">${getSprintDays(s)} dias · ${total} SP · ${s.startDate && s.endDate ? new Date(s.startDate).toLocaleDateString('pt-PT') + ' → ' + new Date(s.endDate).toLocaleDateString('pt-PT') : 'criado ' + date}</div>
           </div>
           ${pct === 100 ? '<span class="sprint-item-badge">✓ Concluído</span>' : `<span style="font-size:.75rem;color:var(--muted);margin-left:8px;">${pct}%</span>`}
           <div class="sprint-item-actions">
@@ -1739,15 +1661,7 @@
 
     // ──────────────────────────────────────────────────────────────
     //  Config
-    // ──────────────────────────────────────────────────────────────
-    // Returns true if the given sprint is the "current" one (today is within its date range)
-    function isCurrentSprint(sprint) {
-      if (!sprint.startDate || !sprint.endDate) return false;
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const start = new Date(sprint.startDate); start.setHours(0, 0, 0, 0);
-      const end = new Date(sprint.endDate); end.setHours(0, 0, 0, 0);
-      return today >= start && today <= end;
-    }
+
 
     function loadSprintForm() {
       const s = getActive(db);
@@ -1891,11 +1805,15 @@
 
     function saveInlineEdit(id) {
       const s = getActive(db);
+      if (!s) return;
       const item = s.items.find(i => i.id === id);
       if (!item) return;
 
       const newName = document.getElementById(`edit-id-${id}`).value.trim();
-      if (!newName) return; // name is required
+      if (!newName) return;
+
+      const duplicate = s.items.some(i => i.id !== id && String(i.name).trim().toLowerCase() === newName.toLowerCase());
+      if (duplicate) { alert(`Já existe um item com o ID "${newName}" neste sprint!`); return; }
 
       item.name = newName;
       item.usName = document.getElementById(`edit-us-${id}`).value.trim();
@@ -2038,12 +1956,14 @@
       const currentCreatedAt = currentSprint.createdAt || '';
 
       for (const sprint of db.sprints) {
-        if (sprint.id === currentSprint.id) continue; // skip the active sprint itself
+        if (sprint.id === currentSprint.id) continue;
         const sprintCreatedAt = sprint.createdAt || '';
         if (sprintCreatedAt < currentCreatedAt) {
-          if (sprint.items.some(i => i.name === item.name)) {
-            return true;
-          }
+          // Comparar por ID primeiro (estável), fallback por nome para dados antigos sem ID
+          const found = item.id
+            ? sprint.items.some(i => i.id === item.id)
+            : sprint.items.some(i => i.name === item.name);
+          if (found) return true;
         }
       }
       return false;
@@ -2554,6 +2474,7 @@
       a.href = URL.createObjectURL(blob);
       a.download = `burndown_backup_${dateStr}_${timeStr}.json`;
       a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 100);
     }
 
     function exportDataExcel() {
@@ -2736,6 +2657,10 @@
         }
       };
 
+      reader.onerror = () => {
+        alert('Erro ao ler o ficheiro. Verifica se o ficheiro não está corrompido ou em uso.');
+        event.target.value = '';
+      };
       reader.readAsArrayBuffer(file);
     }
     function pulse(id) {
