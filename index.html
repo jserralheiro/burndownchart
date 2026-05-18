@@ -1463,10 +1463,20 @@
           }
         });
 
-        // Fundir configuração do Sprint (manter o maior progresso)
-        if (cloudSprint.startDate && !localSprint.startDate) {
+        // Fundir configuração do sprint — last-write-wins por sprint (via configUpdatedAt)
+        const localConfigTime = localSprint.configUpdatedAt || 0;
+        const cloudConfigTime = cloudSprint.configUpdatedAt || 0;
+        if (cloudConfigTime > localConfigTime) {
+          localSprint.name = cloudSprint.name;
           localSprint.startDate = cloudSprint.startDate;
           localSprint.endDate = cloudSprint.endDate;
+          localSprint.days = cloudSprint.days;
+          localSprint.configUpdatedAt = cloudSprint.configUpdatedAt;
+        } else if (!localSprint.startDate && cloudSprint.startDate) {
+          // Fallback: local sem datas ainda, aceitar da cloud
+          localSprint.startDate = cloudSprint.startDate;
+          localSprint.endDate = cloudSprint.endDate;
+          localSprint.days = cloudSprint.days;
         }
         if (cloudSprint.currentDay > localSprint.currentDay) {
           localSprint.currentDay = cloudSprint.currentDay;
@@ -1537,7 +1547,7 @@
 
     function newSprintObj(name, startDate, endDate) {
       const days = (startDate && endDate) ? countBusinessDays(new Date(startDate), new Date(endDate)) : 10;
-      return { id: Date.now().toString(), name, days, currentDay: 1, startDate: startDate || null, endDate: endDate || null, items: [], createdAt: new Date().toISOString() };
+      return { id: Date.now().toString(), name, days, currentDay: 1, startDate: startDate || null, endDate: endDate || null, items: [], createdAt: new Date().toISOString(), configUpdatedAt: Date.now() };
     }
 
     function getActive(db) { return db.sprints.find(s => s.id === db.activeSprint); }
@@ -1796,6 +1806,7 @@
       document.getElementById('sprintLabel').textContent = s.name;
       const rLabel = document.getElementById('reviewSprintLabel');
       if (rLabel) rLabel.textContent = s.name;
+      s.configUpdatedAt = Date.now();
       saveDB();
       disableEditMode();
       pulse('editBtn');
