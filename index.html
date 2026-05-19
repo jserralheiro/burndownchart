@@ -559,6 +559,9 @@
       color: var(--muted);
       transition: color .2s;
       padding: 3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .item-del:hover {
@@ -2123,7 +2126,7 @@
           <span class="item-pts">${item.pts} SP</span>
           <div class="item-actions">
             <button class="item-del ${item.inReview ? 'review-active' : ''}" onclick="toggleInReview('${item.id}')" title="${item.inReview ? 'Em Review' : 'Marcar Em Review'}">
-              <i class="ti ti-search"></i>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="10" cy="10" r="7" fill="currentColor"/><line x1="15.5" y1="15.5" x2="21" y2="21" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>
             </button>
             <button class="item-del ${item.comment ? 'has-comment' : ''}" onclick="openCommentModal('${item.id}')" title="Comentários">
               <i class="ti ti-message"></i>
